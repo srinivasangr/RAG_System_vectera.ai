@@ -48,12 +48,13 @@ from rag_system.ingest.pipeline import ingest_one
 logging.basicConfig(level=logging.INFO)
 
 
+# Curated, deduplicated model lists per provider.
+# Order matters — the first item is the default the dropdown lands on.
 PROVIDER_DEFAULT_MODELS: dict[str, list[str]] = {
-    "openai":     [OpenAIProvider.DEFAULT_MODEL, "gpt-4o", "gpt-4o-mini"],
-    "anthropic":  [AnthropicProvider.DEFAULT_MODEL, "claude-sonnet-4-6", "claude-opus-4-7"],
-    "gemini":     [GeminiProvider.DEFAULT_MODEL, "gemini-2.5-flash", "gemini-2.5-flash-lite"],
-    "cerebras":   [CerebrasProvider.DEFAULT_MODEL, "gpt-oss-120b",
-                   "qwen-3-235b-a22b-instruct-2507", "llama3.1-8b", "zai-glm-4.7"],
+    "cerebras":   ["gpt-oss-120b"],
+    "gemini":     ["gemini-2.5-flash", "gemini-2.5-flash-lite"],
+    "openai":     [OpenAIProvider.DEFAULT_MODEL],
+    "anthropic":  [AnthropicProvider.DEFAULT_MODEL],
     "openrouter": [OpenRouterProvider.DEFAULT_MODEL],
 }
 
