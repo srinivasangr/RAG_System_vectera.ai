@@ -39,13 +39,11 @@ from rag_system.storage.repository import (
     delete_document,
     get_chunk_image_b64,
 )
-from rag_system.ui.jobs import (
-    JOB_STATUS_DONE,
-    JOB_STATUS_ERROR,
-    JOB_STATUS_QUEUED,
-    JOB_STATUS_RUNNING,
-    get_job_manager,
-)
+# JobManager (background-thread ingest) is kept around for future use but
+# isn't called from the UI upload path anymore — Windows + Streamlit + Docling
+# had race conditions causing worker threads to silently die. The UI now runs
+# ingest synchronously in a `st.status()` block.
+from rag_system.ingest.pipeline import ingest_one
 
 logging.basicConfig(level=logging.INFO)
 
@@ -612,10 +610,9 @@ with st.sidebar:
         key="pdf_uploader",
     )
 
-    # New files → submit to background JobManager (non-blocking)
-    mgr = get_job_manager()
-    # Optional toggle for chart vision (off by default because Gemini free-tier
-    # daily quota is easy to exhaust). Flip on once quota resets.
+    # Synchronous ingest — blocks the UI for the duration of the upload but is
+    # rock-solid on Windows (the background-thread version had Docling init
+    # races). Live progress shown via st.status(...).
     enable_vision_upload = st.checkbox(
         "🎨 Describe chart images (uses Gemini vision)",
         value=False,
@@ -630,20 +627,115 @@ with st.sidebar:
         ]
         for uf in new_files:
             saved_path = _save_uploaded_pdf(uf)
-            mgr.submit(
-                file_name=uf.name,
-                pdf_path=saved_path,
-                with_vision=enable_vision_upload,
-                vision_call_budget=20,
-            )
+            with st.status(
+                f"📥 Ingesting **{uf.name}** …", expanded=True
+            ) as status:
+                stage_box = st.empty()
+                progress = st.progress(0.0, text="starting")
+                log_box = st.empty()
+                log_lines: list[str] = []
+
+                # Map pipeline events to live UI updates
+                def _cb(event: str, payload: dict) -> None:
+                    import datetime as _dt
+                    ts = _dt.datetime.now().strftime("%H:%M:%S")
+                    if event == "start":
+                        log_lines.append(f"[{ts}] start: {payload.get('file', uf.name)}")
+                        stage_box.caption("📄 parsing…")
+                        progress.progress(0.05, text="parsing")
+                    elif event == "parse_start":
+                        total = payload.get("total", 0)
+                        log_lines.append(f"[{ts}] parsing {total} pages (batch={payload.get('batch_size')})")
+                    elif event == "parse_batch":
+                        end = payload.get("end", 0)
+                        total = payload.get("total", 1) or 1
+                        pct = 0.05 + 0.55 * (end / total)
+                        progress.progress(min(0.60, pct),
+                                          text=f"parsing {end}/{total} pages")
+                        log_lines.append(
+                            f"[{ts}] parsed pages {payload.get('start')}-{end}/{total} "
+                            f"({payload.get('elapsed_s', 0):.1f}s)"
+                        )
+                    elif event == "parse_done":
+                        stage_box.caption(
+                            f"📄 parse done — {payload.get('pages')} pages, "
+                            f"{payload.get('images')} images"
+                        )
+                        progress.progress(0.60, text="parse done")
+                    elif event == "vision_start":
+                        log_lines.append(f"[{ts}] vision: describing {payload.get('total')} images")
+                        stage_box.caption("📈 vision (rate-limited)…")
+                    elif event == "vision_progress":
+                        d, t = payload.get("done", 0), payload.get("total", 1)
+                        progress.progress(0.60 + 0.15 * (d / max(t, 1)),
+                                          text=f"vision {d}/{t}")
+                    elif event == "vision_done":
+                        log_lines.append(
+                            f"[{ts}] vision done: kept {payload.get('described')}/{payload.get('total')}"
+                        )
+                    elif event == "chunk_done":
+                        log_lines.append(
+                            f"[{ts}] chunked: {payload.get('total')} chunks "
+                            f"{dict(payload.get('by_type', {}))}"
+                        )
+                        progress.progress(0.75, text="chunked")
+                    elif event == "embed_start":
+                        log_lines.append(
+                            f"[{ts}] embedding {payload.get('total')} chunks (local BGE)"
+                        )
+                        stage_box.caption("🧬 embedding…")
+                    elif event == "embed_progress":
+                        d, t = payload.get("done", 0), payload.get("total", 1)
+                        progress.progress(0.75 + 0.20 * (d / max(t, 1)),
+                                          text=f"embed {d}/{t}")
+                    elif event == "embed_done":
+                        log_lines.append(f"[{ts}] embedded {payload.get('total')} chunks")
+                        progress.progress(0.95, text="upserting")
+                        stage_box.caption("☁ upserting to Snowflake…")
+                    elif event == "upsert_done":
+                        log_lines.append(
+                            f"[{ts}] snowflake: {payload.get('doc_status')} · "
+                            f"{payload.get('chunks')} chunks stored"
+                        )
+                        progress.progress(1.0, text="done")
+                    elif event == "done":
+                        log_lines.append(f"[{ts}] DONE in {payload.get('elapsed_s')}s")
+                    elif event == "error":
+                        log_lines.append(
+                            f"[{ts}] ERROR ({payload.get('stage')}): {payload.get('message')}"
+                        )
+                    log_box.text("\n".join(log_lines[-8:]))
+
+                try:
+                    result = ingest_one(
+                        saved_path,
+                        with_vision=enable_vision_upload,
+                        vision_call_budget=20,
+                        progress_cb=_cb,
+                    )
+                    status.update(
+                        label=f"✅ Ingested **{uf.name}** — "
+                              f"{result.get('chunks', 0)} chunks in "
+                              f"{result.get('elapsed_s', 0)}s",
+                        state="complete", expanded=False,
+                    )
+                except Exception as e:
+                    status.update(
+                        label=f"❌ Failed: **{uf.name}** — {type(e).__name__}: {e}",
+                        state="error",
+                    )
             st.session_state._processed_uploads.add(uf.file_id)
         if new_files:
-            st.rerun()  # let the jobs panel render immediately
+            st.cache_data.clear()
+            st.rerun()
 
-    # ============ Active jobs panel (auto-refreshing fragment) ============
-    @st.fragment(run_every="1.5s")
+    # ============ Active jobs panel (no-op now that uploads are synchronous) ===
+    # Kept as a stub in case we re-enable the background JobManager later.
     def _render_jobs_panel():
-        jobs = mgr.list()
+        return
+        # Original fragment-based implementation lives in git history; restore
+        # by reverting this stub + re-importing get_job_manager / JOB_STATUS_*.
+        jobs = []  # mgr.list()
         if not jobs:
             return
 
