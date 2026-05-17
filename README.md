@@ -45,7 +45,7 @@ RAG_System/
 
 ```mermaid
 flowchart LR
-    Documents[PDFs] -->|Docling parse| Chunk[Chunked text + tables + images/charts(optional with gemini api)]
+    Documents[PDFs] -->|Docling parse| Chunk["Chunked text + tables + images/charts (optional with gemini api)"]
     Chunk -->|BGE-base-en-v1.5 local| Embed[768-d vectors]
     Embed --> Storage[(Snowflake)]
 
