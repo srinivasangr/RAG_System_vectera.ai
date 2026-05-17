@@ -45,30 +45,26 @@ RAG_System/
 
 ```mermaid
 flowchart LR
-    PDF[10 Investor PDFs] -->|Docling parse| Chunk[Chunked text + tables]
+    Documents[PDFs] -->|Docling parse| Chunk[Chunked text + tables + images/charts(optional with gemini api)]
     Chunk -->|BGE-base-en-v1.5 local| Embed[768-d vectors]
-    Embed --> SF[(Snowflake)]
+    Embed --> Storage[(Snowflake)]
 
     User[User question] -->|embed| Q[Query vector]
-    Q --> SF
-    SF -->|hybrid retrieve| TopK[Top-K chunks]
-    TopK -->|grounded prompt + cites| LLM[Cerebras gpt-oss-120b]
+    Q --> Storage
+    Storage -->|hybrid retrieve| TopK[Top-K chunks]
+    TopK -->|grounded prompt + cites| LLM
     LLM --> Answer[Markdown answer + source cards]
 ```
-
-**Full diagram:** [`docs/architecture.drawio`](docs/architecture.drawio) — open in
-[diagrams.net](https://app.diagrams.net) (File → Open).
-Mermaid version + per-stage notes: [`docs/architecture.md`](docs/architecture.md).
 
 **Two distinct planes:**
 
 1. **Ingestion (offline, batch):** PDF → Docling (layout-aware, batched
-   page processing) → page-aware chunker → local sentence-transformer
+   page processing) → page-aware chunker → loal sentence-transformer
    embeddings (BGE-base-en-v1.5, 768d) → Snowflake upsert. Idempotent by
    file checksum.
 2. **Query (online, stateless):** user question → embed → hybrid retrieve
    (dense cosine ∪ lexical LIKE, fused with Reciprocal Rank Fusion) → format
-   numbered sources → strict citation prompt → Cerebras `gpt-oss-120b` →
+   numbered sources → strict citation prompt → LLM (Cerebras `gpt-oss-120b` or gemini models) →
    parse `[N]` markers → render in chat with clickable source cards.
 
 ---
@@ -77,12 +73,12 @@ Mermaid version + per-stage notes: [`docs/architecture.md`](docs/architecture.md
 
 ### 1. Prerequisites
 
-- **Python 3.11+** (3.13 tested)
+- **Python 3.11+**
 - **Git**
 - **Free accounts:**
-  - **Snowflake trial** — https://signup.snowflake.com (any cloud, any region; takes 2 min)
-  - **Cerebras API key** — https://cloud.cerebras.ai (free tier, takes 1 min)
-  - **Gemini API key** *(optional)* — https://aistudio.google.com/apikey (only needed for chart-image descriptions; off by default)
+  - **Snowflake trial** — https://signup.snowflake.com
+  - **Cerebras API key** — https://cloud.cerebras.ai 
+  - **Gemini API key** *(optional)* — https://aistudio.google.com/apikey (only needed for chart-image descriptions chunking; off by default)
 
 ### 2. Clone
 
@@ -161,12 +157,9 @@ python scripts/ingest_all_pending.py --no-vision
 
 What this does:
 - Scans `../Documents/` for PDFs
-- Skips any whose checksum already exists in Snowflake (idempotent)
 - For each pending PDF: parse → chunk → embed → upsert (one at a time)
 
-**Expected runtime: ~40 minutes** on a typical laptop (CPU-bound on Docling parse).
-The first PDF (BXP Morning Session, 152p) is the longest (~10 min);
-smaller ones complete in 1-3 min each.
+**Expected runtime: 2-3 mins per document complexity** on a typical laptop (CPU-bound on Docling parse).
 
 Monitor progress from another terminal:
 ```bash
@@ -181,8 +174,6 @@ streamlit run rag_system/ui/streamlit_app.py
 
 Open **http://localhost:8501**.
 
-You should see all 10 sources in the sidebar, a chat input at the bottom,
-and a `⚙ Model` popover.
 
 Try these queries:
 
@@ -193,7 +184,7 @@ Try these queries:
 | *Which REITs in this corpus focus on data centers?* | Cross-document reasoning |
 | *What is Apple's stock price today?* | Should refuse cleanly (out of corpus) |
 
-### 8. (Optional) Run the eval
+### 8. Run the eval
 
 ```bash
 python -m eval.run_eval
@@ -208,20 +199,16 @@ Reports Recall@k, MRR, must-contain rate, and refusal correctness against a
 
 | Choice | Why |
 |---|---|
-| **Snowflake** for storage + vector search | Required by brief. Cortex AI functions are blocked on trial — so we use `VECTOR_COSINE_SIMILARITY` (pure SQL, works on every tier) + external embeddings. |
-| **Docling** for PDF parsing | Layout-aware, handles slide-heavy investor decks, outputs structured Markdown including tables. |
-| **Local BGE-base-en-v1.5** for embeddings | No API rate limits, no quota, free, 768d matches schema. Earlier Gemini-based runs hit the 100 RPM free-tier limit constantly. |
-| **Cerebras `gpt-oss-120b`** for answer generation | Frontier-class OSS model served at very low latency. Free tier is generous enough for the demo. |
+| **Snowflake** for storage + vector search | Use `VECTOR_COSINE_SIMILARITY` (pure SQL, works on every tier) + external embeddings. |
+| **Docling** for PDF parsing | Layout-aware, handles slide-heavy investor decks, outputs structured Markdown including tables. | best option for the OCR based page layout extraction and parsing comapred llama parse unstucctured.io and the charts/images can be translated to text with gemini api representation is extracted for each image from the pdf to make it searchable and answerable (kept for  optional now because of free rate limits) 
+| **Local BGE-base-en-v1.5** for embeddings | No API rate limits, runs locally. Earlier Gemini-based runs hit the 100 RPM free-tier limit constantly had to replace for this initial demo. |
+| **Cerebras `gpt-oss-120b`** for answer generation | Frontier-class OSS model served at very low latency. Free tier is generous enough for the demo. | Any model can be used on this layer/provider
 | **Hybrid retrieval (dense ∪ lexical, RRF fused)** | Investor decks are dense with tickers, metric acronyms (FFO, NOI, AFFO), and named figures — pure dense misses exact-string matches. RRF is parameter-free. |
-| **Page-aware chunking** | Citations need precise page numbers; tables are isolated so structured rows stay intact. |
+| **Page-aware chunking** | Citations need precise page numbers; tables are isolated so structured rows stay intact with meta data|
 | **Strict citation prompt** | Forces `[N]` markers on every factual claim, requires attribution when sources disagree, refuses cleanly on insufficient evidence. |
 | **Streamlit chat UI (NotebookLM-style)** | Brief recommended Streamlit. Sidebar shows source toggles, source cards under each answer open a detail modal (Perplexity / NotebookLM pattern). |
 
----
 
-## How the brief's "key capabilities" are handled
-
-| Capability | Where it's solved |
 |---|---|
 | **Version awareness** | Filenames parsed to `company` + `doc_date` + `version_label`. Denormalized onto every chunk row. Prompt instructs the model to attribute by version. Optional **recency boost** auto-activates when the query contains "latest"/"current"/"recent". |
 | **Cross-document conflicts** | Retrieval pulls top-K from all docs without per-doc quotas. Prompt explicitly forbids averaging or silently picking one side — disagreements must be surfaced with attribution. |
@@ -230,37 +217,19 @@ Reports Recall@k, MRR, must-contain rate, and refusal correctness against a
 
 ---
 
-## Known limitations
 
-- **Chart-image descriptions are off by default.** The text + table content
-  fully covers most questions. To enable: toggle "🎨 Describe chart images"
-  in the Sources panel — requires a Gemini API key with remaining
-  free-tier quota.
-- **OCR is off.** Investor decks are digital-native; OCR adds 5-10× parse
-  time and Tesseract quality on slide layouts is poor. Scanned PDFs would
-  return no text.
-- **Single-tenant.** Multi-tenant access control is sketched in the
-  `chunks` schema (you could add a `tenant_id` column + Snowflake row
-  access policy) but not enforced.
-- **Lexical search uses `LIKE`** rather than Snowflake's full-text
-  `SEARCH()` (gated on higher tiers). Fast enough at this corpus size.
-- **No reranker.** A cross-encoder rerank step between candidate-30 and
-  top-8 would improve recall on harder questions; deferred for time.
-
----
 
 ## What I'd improve with more time
 
 - Re-enable Gemini Vision and re-ingest with chart-image descriptions for all 10 docs
 - Cross-encoder reranker (`bge-reranker-base` or Cohere Rerank)
 - Multi-turn chat with conversation memory
-- Streaming responses in the UI
+- Streaming responses in the UI(optional)
 - Snowflake row-access policies for multi-tenant isolation
 - HyDE / query rewriting for harder questions
 - Eval harness wired into CI (fail PR if Recall@k drops)
 
-See [`design/01_system_design.md`](design/01_system_design.md) for the full
-17-section design document including every tradeoff considered.
+
 
 ---
 
@@ -268,7 +237,7 @@ See [`design/01_system_design.md`](design/01_system_design.md) for the full
 
 | Problem | Fix |
 |---|---|
-| `EMBED_TEXT_768 is not available for trial accounts` | Expected — we don't use Cortex AI. Make sure `EMBEDDING_PROVIDER=local` in `.env`. |
+| `EMBED_TEXT_768 is not available for trial accounts` | Make sure `EMBEDDING_PROVIDER=local` in `.env`. |
 | Streamlit hangs during a multi-file upload | Known issue with Streamlit + Docling worker threads on Windows. Upload PDFs **one at a time** via the UI, or use `python scripts/ingest_all_pending.py` for bulk. |
 | Snowflake `RESOURCE_EXHAUSTED 429` from Gemini | You've hit a Gemini free-tier rate limit. Wait a minute (RPM) or until midnight Pacific (RPD). Or run with `--no-vision`. |
 | Docling `std::bad_alloc` on a specific page batch | Memory pressure during image rendering. The parser auto-retries with smaller batches (10 → 5 → 2). If still failing, that PDF page is genuinely too large; skip it. |
@@ -276,8 +245,3 @@ See [`design/01_system_design.md`](design/01_system_design.md) for the full
 
 ---
 
-## License
-
-Submitted as an assessment artifact — no public license. Source PDFs in
-`Documents/` are publicly distributed investor presentations from their
-respective REITs.
