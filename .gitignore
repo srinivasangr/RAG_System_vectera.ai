@@ -1,0 +1,82 @@
+# ===========================================================================
+# Secrets — NEVER commit
+# ===========================================================================
+.env
+.env.local
+.env.*.local
+*.env
+!*.env.example
+*.key
+*.pem
+.streamlit/secrets.toml
+
+# ===========================================================================
+# Python
+# ===========================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Caches
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# ===========================================================================
+# OS / IDE
+# ===========================================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===========================================================================
+# Claude Code internal — not for the repo
+# ===========================================================================
+.claude/
+memory/
+
+# ===========================================================================
+# Local ingest artifacts
+# ===========================================================================
+*.log
+**/.cache/
+**/uploads/
+
+# Anything starting with an underscore in scripts/ is an ad-hoc helper
+app/scripts/_*.py

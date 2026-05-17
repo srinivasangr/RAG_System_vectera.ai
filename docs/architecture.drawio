@@ -1,0 +1,333 @@
+<mxfile host="app.diagrams.net" agent="claude-rag-system" version="24.7.17">
+  <diagram id="rag-architecture" name="RAG Architecture">
+    <mxGraphModel dx="1422" dy="824" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ============================================================ -->
+        <!-- TITLE                                                        -->
+        <!-- ============================================================ -->
+        <mxCell id="title" value="Vectera RAG System — Architecture" style="text;html=1;align=center;verticalAlign=middle;fontSize=22;fontStyle=1;fontColor=#333333" vertex="1" parent="1">
+          <mxGeometry x="540" y="20" width="600" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="Snowflake (vector store) · Modular LLM providers · Streamlit UI · Docling + Gemini Vision ingestion" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontColor=#666666" vertex="1" parent="1">
+          <mxGeometry x="440" y="50" width="800" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- USER LAYER                                                   -->
+        <!-- ============================================================ -->
+        <mxCell id="user" value="&lt;b&gt;Analyst (Browser)&lt;/b&gt;&lt;br&gt;asks natural-language questions&lt;br&gt;views answers + citations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=center;verticalAlign=middle" vertex="1" parent="1">
+          <mxGeometry x="720" y="90" width="240" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- STREAMLIT UI                                                 -->
+        <!-- ============================================================ -->
+        <mxCell id="ui-group" value="Streamlit UI (http://localhost:8501)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;fontStyle=1;verticalAlign=top;align=center" vertex="1" parent="1">
+          <mxGeometry x="320" y="200" width="1040" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="ui-sidebar" value="&lt;b&gt;Sidebar&lt;/b&gt;&lt;br&gt;• Company / date filters&lt;br&gt;• Provider + model picker&lt;br&gt;• Top-K slider&lt;br&gt;• Recency boost toggle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="340" y="235" width="220" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="ui-query" value="&lt;b&gt;Query box&lt;/b&gt;&lt;br&gt;free-text question input&lt;br&gt;&lt;b&gt;[Ask]&lt;/b&gt; button" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="580" y="235" width="220" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="ui-answer" value="&lt;b&gt;Answer panel&lt;/b&gt;&lt;br&gt;• Markdown answer with [N]&lt;br&gt;• Citation expanders (image + text)&lt;br&gt;• Latency metrics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="820" y="235" width="240" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="ui-debug" value="&lt;b&gt;Debug panel&lt;/b&gt;&lt;br&gt;all retrieved chunks +&lt;br&gt;dense / keyword ranks +&lt;br&gt;fused RRF score" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="1080" y="235" width="260" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- QUERY SERVICE                                                -->
+        <!-- ============================================================ -->
+        <mxCell id="query-group" value="Query Service — rag_system.generation.query()" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;verticalAlign=top;align=center" vertex="1" parent="1">
+          <mxGeometry x="40" y="360" width="900" height="180" as="geometry" />
+        </mxCell>
+
+        <mxCell id="step-embed" value="&lt;b&gt;1. Embed query&lt;/b&gt;&lt;br&gt;Gemini embedding-001&lt;br&gt;→ 768-dim vector" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="60" y="400" width="170" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="step-retrieve" value="&lt;b&gt;2. Hybrid Retrieve&lt;/b&gt;&lt;br&gt;• Dense (cosine) top-30&lt;br&gt;• Lexical (LIKE) top-30&lt;br&gt;• RRF fusion → top-K&lt;br&gt;• Filters: company, date&lt;br&gt;• Recency boost" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="260" y="390" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="step-prompt" value="&lt;b&gt;3. Format prompt&lt;/b&gt;&lt;br&gt;• System: cite-everything,&lt;br&gt;  surface conflicts, refuse&lt;br&gt;  cleanly&lt;br&gt;• User: numbered [N] sources&lt;br&gt;  with company + date + page" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="490" y="390" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="step-llm" value="&lt;b&gt;4. LLM + parse cites&lt;/b&gt;&lt;br&gt;• Default Cerebras gpt-oss-120b&lt;br&gt;• Grounded answer&lt;br&gt;• Regex [N] → Citation objects" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="720" y="390" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- INGESTION PIPELINE                                           -->
+        <!-- ============================================================ -->
+        <mxCell id="ingest-group" value="Ingestion Pipeline — rag_system.ingest.pipeline (offline, batch)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fad7ac;strokeColor=#b46504;fontSize=13;fontStyle=1;verticalAlign=top;align=center" vertex="1" parent="1">
+          <mxGeometry x="980" y="360" width="640" height="180" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ing-parse" value="&lt;b&gt;Docling parse&lt;/b&gt;&lt;br&gt;page batches of 5&lt;br&gt;per-page Markdown&lt;br&gt;+ extracted images" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b46504;fontSize=10;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="1000" y="400" width="140" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ing-vision" value="&lt;b&gt;Gemini 2.5 Flash&lt;/b&gt;&lt;br&gt;vision describes&lt;br&gt;each chart as&lt;br&gt;structured Markdown&lt;br&gt;(skip logos)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b46504;fontSize=10;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="1150" y="400" width="140" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ing-chunk" value="&lt;b&gt;Chunk&lt;/b&gt;&lt;br&gt;page-aware&lt;br&gt;~800 tok / 100 ovl&lt;br&gt;tagged: prose /&lt;br&gt;table / chart_desc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b46504;fontSize=10;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="1300" y="400" width="140" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ing-embed" value="&lt;b&gt;Embed&lt;/b&gt;&lt;br&gt;Gemini emb-001&lt;br&gt;→ 768d vectors&lt;br&gt;&lt;b&gt;Upsert&lt;/b&gt; idempotent&lt;br&gt;by checksum" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b46504;fontSize=10;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="1450" y="400" width="150" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- MODULAR PROVIDER LAYER                                       -->
+        <!-- ============================================================ -->
+        <mxCell id="prov-group" value="LLM Provider Abstraction — rag_system.llm_providers" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontStyle=1;verticalAlign=top;align=center" vertex="1" parent="1">
+          <mxGeometry x="40" y="600" width="900" height="180" as="geometry" />
+        </mxCell>
+
+        <mxCell id="prov-base" value="&lt;b&gt;Abstract bases&lt;/b&gt;&lt;br&gt;• BaseLLMProvider&lt;br&gt;• BaseEmbeddingProvider&lt;br&gt;• BaseVisionProvider&lt;br&gt;Factory: get_llm() /&lt;br&gt;get_embedder() / get_vision()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="60" y="640" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="prov-openai" value="&lt;b&gt;OpenAI&lt;/b&gt;&lt;br&gt;gpt-4o-mini" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;align=center;verticalAlign=middle" vertex="1" parent="1">
+          <mxGeometry x="290" y="640" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="prov-anthropic" value="&lt;b&gt;Anthropic&lt;/b&gt;&lt;br&gt;claude-sonnet-4-6" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;align=center;verticalAlign=middle" vertex="1" parent="1">
+          <mxGeometry x="430" y="640" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="prov-gemini" value="&lt;b&gt;Gemini&lt;/b&gt;&lt;br&gt;LLM + embed + vision" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="590" y="640" width="170" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="prov-cerebras" value="&lt;b&gt;Cerebras&lt;/b&gt;&lt;br&gt;gpt-oss-120b" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="780" y="640" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="prov-openrouter" value="&lt;b&gt;OpenRouter&lt;/b&gt;&lt;br&gt;any open model" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;align=center;verticalAlign=middle" vertex="1" parent="1">
+          <mxGeometry x="290" y="710" width="150" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="prov-active-note" value="Highlighted = active in this build:&lt;br&gt;Cerebras for answers, Gemini for embed + vision" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontColor=#666666" vertex="1" parent="1">
+          <mxGeometry x="460" y="710" width="460" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- SNOWFLAKE STORAGE                                            -->
+        <!-- ============================================================ -->
+        <mxCell id="sf-group" value="Snowflake — RAG_DB.RAG_SCHEMA" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#cce5ff;strokeColor=#1c6ea4;fontSize=13;fontStyle=1;verticalAlign=top;align=center" vertex="1" parent="1">
+          <mxGeometry x="980" y="600" width="640" height="180" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sf-docs" value="&lt;b&gt;documents&lt;/b&gt;&lt;br&gt;doc_id PK, company,&lt;br&gt;doc_date, doc_type,&lt;br&gt;version_label, checksum" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#1c6ea4;fontSize=10;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="1000" y="640" width="150" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sf-chunks" value="&lt;b&gt;chunks&lt;/b&gt;&lt;br&gt;chunk_id PK,&lt;br&gt;page_number,&lt;br&gt;chunk_type,&lt;br&gt;text, token_count,&lt;br&gt;&lt;b&gt;embedding VECTOR(FLOAT, 768)&lt;/b&gt;,&lt;br&gt;company, doc_date" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#1c6ea4;fontSize=10;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="1160" y="640" width="180" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sf-images" value="&lt;b&gt;chunk_images&lt;/b&gt;&lt;br&gt;chunk_id PK,&lt;br&gt;width, height,&lt;br&gt;mime_type,&lt;br&gt;image_b64 (PNG base64)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#1c6ea4;fontSize=10;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="1350" y="640" width="140" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sf-log" value="&lt;b&gt;query_log&lt;/b&gt;&lt;br&gt;question, retrieved_ids,&lt;br&gt;answer, llm_provider,&lt;br&gt;latency_ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#1c6ea4;fontSize=10;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="1500" y="640" width="110" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- SOURCE DOCS                                                  -->
+        <!-- ============================================================ -->
+        <mxCell id="docs-source" value="&lt;b&gt;Source PDFs&lt;/b&gt;&lt;br&gt;Documents/ — 10 REIT investor presentations&lt;br&gt;(BXP, Digital Realty, EGP, PSA, Realty Income, Simon, VICI)" style="shape=note;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=center;verticalAlign=middle;size=18" vertex="1" parent="1">
+          <mxGeometry x="1170" y="830" width="350" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- LEGEND                                                       -->
+        <!-- ============================================================ -->
+        <mxCell id="legend-group" value="Legend" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=1;verticalAlign=top;align=center" vertex="1" parent="1">
+          <mxGeometry x="40" y="830" width="500" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-ui" value="UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=center" vertex="1" parent="1">
+          <mxGeometry x="55" y="860" width="60" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-svc" value="Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=center" vertex="1" parent="1">
+          <mxGeometry x="125" y="860" width="60" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-ing" value="Ingest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7ac;strokeColor=#b46504;fontSize=10;align=center" vertex="1" parent="1">
+          <mxGeometry x="195" y="860" width="60" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-prov" value="Provider" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;align=center" vertex="1" parent="1">
+          <mxGeometry x="265" y="860" width="70" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-sf" value="Snowflake" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cce5ff;strokeColor=#1c6ea4;fontSize=10;align=center" vertex="1" parent="1">
+          <mxGeometry x="345" y="860" width="80" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-pdf" value="Source data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=center" vertex="1" parent="1">
+          <mxGeometry x="435" y="860" width="90" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-flow1" value="→ solid arrow = query-time data flow" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#333333" vertex="1" parent="1">
+          <mxGeometry x="55" y="882" width="220" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-flow2" value="⇢ dashed arrow = ingest-time data flow" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#333333" vertex="1" parent="1">
+          <mxGeometry x="280" y="882" width="240" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- EDGES — query path (solid)                                   -->
+        <!-- ============================================================ -->
+        <mxCell id="e-user-ui" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2" edge="1" parent="1" source="user" target="ui-group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e-ui-query" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;strokeWidth=2" edge="1" parent="1" source="ui-group" target="query-group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e-embed-retrieve" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2" edge="1" parent="1" source="step-embed" target="step-retrieve">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-retrieve-prompt" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2" edge="1" parent="1" source="step-retrieve" target="step-prompt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-prompt-llm" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2" edge="1" parent="1" source="step-prompt" target="step-llm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Retrieve → Snowflake (read) -->
+        <mxCell id="e-retrieve-sf" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=#1c6ea4;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.4;entryDx=0;entryDy=0" edge="1" parent="1" source="step-retrieve" target="sf-chunks">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="900" y="580" />
+              <mxPoint x="900" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-retrieve-sf-label" value="cosine + LIKE" style="text;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#1c6ea4" vertex="1" parent="1">
+          <mxGeometry x="900" y="585" width="100" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Embed query → Gemini provider -->
+        <mxCell id="e-embed-prov" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=1;dashed=0;strokeColor=#6c8ebf" edge="1" parent="1" source="step-embed" target="prov-gemini">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="145" y="560" />
+              <mxPoint x="675" y="560" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- LLM step → providers -->
+        <mxCell id="e-llm-cerebras" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#82b366" edge="1" parent="1" source="step-llm" target="prov-cerebras">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- EDGES — ingest path (dashed)                                 -->
+        <!-- ============================================================ -->
+        <mxCell id="e-pdf-parse" style="endArrow=classic;html=1;rounded=0;dashed=1;dashPattern=8 4;strokeWidth=2;strokeColor=#b46504;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0" edge="1" parent="1" source="docs-source" target="ing-parse">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1070" y="830" />
+              <mxPoint x="1070" y="540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="e-parse-vision" style="endArrow=classic;html=1;rounded=0;dashed=1;dashPattern=8 4;strokeWidth=2;strokeColor=#b46504;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="ing-parse" target="ing-vision">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-vision-chunk" style="endArrow=classic;html=1;rounded=0;dashed=1;dashPattern=8 4;strokeWidth=2;strokeColor=#b46504;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="ing-vision" target="ing-chunk">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-chunk-embed" style="endArrow=classic;html=1;rounded=0;dashed=1;dashPattern=8 4;strokeWidth=2;strokeColor=#b46504;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="ing-chunk" target="ing-embed">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Vision → Gemini provider -->
+        <mxCell id="e-vision-prov" style="endArrow=classic;html=1;rounded=0;dashed=1;dashPattern=8 4;strokeWidth=1;strokeColor=#6c8ebf;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="ing-vision" target="prov-gemini">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1220" y="570" />
+              <mxPoint x="675" y="570" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Embed step → Gemini provider -->
+        <mxCell id="e-ing-embed-prov" style="endArrow=classic;html=1;rounded=0;dashed=1;dashPattern=8 4;strokeWidth=1;strokeColor=#6c8ebf;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="ing-embed" target="prov-gemini">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="990" y="580" />
+              <mxPoint x="990" y="665" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Embed → Snowflake upsert -->
+        <mxCell id="e-embed-sf" style="endArrow=classic;html=1;rounded=0;dashed=1;dashPattern=8 4;strokeWidth=2;strokeColor=#1c6ea4;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="ing-embed" target="sf-chunks">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1525" y="560" />
+              <mxPoint x="1250" y="560" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-embed-sf-label" value="upsert (idempotent by checksum)" style="text;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#1c6ea4" vertex="1" parent="1">
+          <mxGeometry x="1250" y="560" width="190" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Vision → chunk_images -->
+        <mxCell id="e-vision-images" style="endArrow=classic;html=1;rounded=0;dashed=1;dashPattern=8 4;strokeWidth=1;strokeColor=#1c6ea4;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="ing-vision" target="sf-images">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1290" y="540" />
+              <mxPoint x="1420" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- LLM step → query_log -->
+        <mxCell id="e-llm-log" style="endArrow=classic;html=1;rounded=0;strokeWidth=1;strokeColor=#1c6ea4;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="step-llm" target="sf-log">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="950" y="540" />
+              <mxPoint x="1555" y="610" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-llm-log-label" value="log every query" style="text;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#1c6ea4" vertex="1" parent="1">
+          <mxGeometry x="1100" y="540" width="100" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Answer back to UI -->
+        <mxCell id="e-svc-ui" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;strokeWidth=2" edge="1" parent="1" source="query-group" target="ui-group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-svc-ui-label" value="Answer + Citations" style="text;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#333333" vertex="1" parent="1">
+          <mxGeometry x="700" y="335" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- chunk_images → UI -->
+        <mxCell id="e-images-ui" style="endArrow=classic;html=1;rounded=0;strokeWidth=1;strokeColor=#1c6ea4;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="sf-images" target="ui-debug">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1420" y="345" />
+              <mxPoint x="1340" y="272" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-images-ui-label" value="render chart PNG&lt;br&gt;in citation expander" style="text;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#1c6ea4" vertex="1" parent="1">
+          <mxGeometry x="1370" y="450" width="160" height="30" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

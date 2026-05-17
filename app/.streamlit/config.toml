@@ -1,0 +1,18 @@
+# Materialistic dark theme — Material Design 3 inspired
+# Colors: indigo/purple primary on near-black surface.
+
+[theme]
+base = "dark"
+primaryColor            = "#7C4DFF"   # Deep Purple A200 — buttons, accents
+backgroundColor         = "#0F1115"   # Page background — near-black
+secondaryBackgroundColor = "#1A1D24"  # Cards, sidebar, expanders
+textColor               = "#E8EAED"   # Primary text — light gray
+font                    = "sans serif"
+
+[server]
+headless = true
+runOnSave = true
+fileWatcherType = "auto"
+
+[browser]
+gatherUsageStats = false

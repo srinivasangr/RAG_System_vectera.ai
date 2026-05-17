@@ -1,0 +1,127 @@
+# =====================================================================
+# Eval set for the Vectera RAG system
+# =====================================================================
+# Each entry:
+#   id:           unique short label
+#   category:     single_fact | cross_doc | version_compare | conflict |
+#                 unanswerable | chart_only
+#   question:     the user-facing query
+#   must_contain: phrases / numbers the answer SHOULD include (substring)
+#   must_not:     phrases the answer should NOT include (false positives)
+#   gold_pages:   pages whose chunks the retriever SHOULD surface (used for
+#                 Recall@k); list of {company, page} dicts
+#   refuse:       true if the model should explicitly refuse with the
+#                 insufficient-info sentence
+#
+# Currently only Digital Realty Dec 2025 is in the corpus; questions that
+# require other docs are tagged `requires:` so we can skip them until full
+# ingestion is done.
+# =====================================================================
+
+- id: dlr_leverage
+  category: single_fact
+  question: What is Digital Realty's leverage ratio (Net Debt to Adjusted EBITDA)?
+  must_contain:
+    - "4.9"   # current
+  gold_pages:
+    - { company: Digital Realty, page: 26 }
+    - { company: Digital Realty, page: 36 }
+
+- id: dlr_customers_count
+  category: single_fact
+  question: How many customers does Digital Realty serve?
+  must_contain:
+    - "5,000"
+  gold_pages:
+    - { company: Digital Realty, page: 3 }
+
+- id: dlr_cross_connects
+  category: single_fact
+  question: How many cross connects does Digital Realty have?
+  must_contain:
+    - "231,000"
+  gold_pages:
+    - { company: Digital Realty, page: 3 }
+
+- id: dlr_customer_breakdown
+  category: single_fact
+  question: What is the breakdown of Digital Realty's customers by ARR?
+  must_contain:
+    - "Cloud"
+    - "41"
+  gold_pages:
+    - { company: Digital Realty, page: 25 }
+
+- id: dlr_rental_spread_total
+  category: single_fact
+  question: What was Digital Realty's total cash rental rate change on 3Q25 renewals?
+  must_contain:
+    - "8.0"   # 8.0% total cash
+  gold_pages:
+    - { company: Digital Realty, page: 22 }
+
+- id: dlr_sustainability_msci
+  category: single_fact
+  question: What is Digital Realty's MSCI sustainability rating?
+  must_contain:
+    - "AAA"
+  gold_pages:
+    - { company: Digital Realty, page: 8 }
+
+- id: dlr_capacity_gw
+  category: single_fact
+  question: What is Digital Realty's total IT capacity?
+  must_contain:
+    - "2.9"
+    - "GW"
+  gold_pages:
+    - { company: Digital Realty, page: 5 }
+
+# --- Should refuse cleanly ---
+- id: refuse_apple_price
+  category: unanswerable
+  question: What is the share price of Apple as of today?
+  refuse: true
+  must_contain:
+    - "don't have enough information"
+
+- id: refuse_outside_corpus
+  category: unanswerable
+  question: What is the GDP of Japan?
+  refuse: true
+  must_contain:
+    - "don't have enough information"
+
+# --- Cross-doc / version-compare (require full corpus ingestion) ---
+- id: dlr_version_compare
+  category: version_compare
+  question: How has Digital Realty's leverage ratio changed between the Dec 2025 and Mar 2026 presentations?
+  requires: ["Digital Realty Mar 2026"]
+  gold_pages:
+    - { company: Digital Realty, page: 26 }
+
+- id: bxp_strategy
+  category: single_fact
+  question: What is BXP's key strategy?
+  requires: ["BXP"]
+  gold_pages:
+    - { company: Boston Properties }
+
+- id: psa_merger
+  category: single_fact
+  question: What companies are involved in the PSA merger?
+  requires: ["PSA Merger"]
+  gold_pages:
+    - { company: Public Storage }
+
+- id: vici_strategy
+  category: single_fact
+  question: What is VICI Properties' primary investment strategy?
+  requires: ["VICI"]
+  gold_pages:
+    - { company: VICI Properties }
+
+- id: cross_doc_data_center_strategies
+  category: cross_doc
+  question: Compare the data center strategies described by the companies in this corpus.
+  requires: ["Digital Realty Mar 2026"]
