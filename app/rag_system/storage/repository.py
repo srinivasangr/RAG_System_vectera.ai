@@ -216,6 +216,11 @@ def log_query(
     llm_model: str,
     latency_ms: int,
 ) -> str:
+    """Append one row to query_log. Returns the generated query_id.
+
+    Note: VARIANT and ARRAY columns can't be bound directly via the connector's
+    pyformat path — we serialize them to JSON strings and cast in SQL.
+    """
     qid = str(uuid.uuid4())
     with get_connection() as conn:
         cur = conn.cursor()
@@ -224,11 +229,20 @@ def log_query(
             INSERT INTO query_log
               (query_id, question, filters, retrieved_ids, answer,
                llm_provider, llm_model, latency_ms)
-            SELECT %s, %s, PARSE_JSON(%s), %s, %s, %s, %s, %s
+            SELECT %s, %s,
+                   PARSE_JSON(%s),
+                   PARSE_JSON(%s)::ARRAY,
+                   %s, %s, %s, %s
             """,
             (
-                qid, question, json.dumps(filters), retrieved_ids, answer,
-                llm_provider, llm_model, latency_ms,
+                qid,
+                question,
+                json.dumps(filters or {}),
+                json.dumps(list(retrieved_ids or [])),
+                answer,
+                llm_provider,
+                llm_model,
+                latency_ms,
             ),
         )
         conn.commit()

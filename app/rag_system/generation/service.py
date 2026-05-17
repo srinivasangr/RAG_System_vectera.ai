@@ -97,7 +97,7 @@ def query(
         generation_ms=generation_ms,
     )
 
-    # 5) Log
+    # 5) Log — non-fatal but no longer silently swallowed
     if write_log:
         try:
             log_query(
@@ -110,7 +110,9 @@ def query(
                 llm_model=ans.llm_model,
                 latency_ms=latency_ms,
             )
-        except Exception:
-            # Non-fatal; logging shouldn't break the user's query
-            pass
+        except Exception as e:
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                "query_log write failed: %s: %s", type(e).__name__, e,
+            )
     return ans
