@@ -1,11 +1,14 @@
-# RAG System — Investor Document Q&A
+# RAG System — Document Q&A
 
 A Retrieval-Augmented Generation system over a corpus of investor-presentation
 PDFs. Ask natural-language questions; get **source-grounded answers with
 inline citations** that link back to the exact page in the original document.
 
-Built as a take-home assessment. The brief, source PDFs, design notes, and
-architecture diagrams are all included in this repo.
+> **Try it live →** [ragsystemchatbot.streamlit.app](https://ragsystemchatbot.streamlit.app/)
+> *(read-only — chats against 11 pre-ingested REIT investor decks; uploads disabled on the hosted version, see [docs/streamlit_cloud_setup.md](docs/streamlit_cloud_setup.md) for why)*
+
+Built as a take-home assessment. The brief, source PDFs, and architecture
+diagrams are all included in this repo.
 
 ---
 
@@ -14,29 +17,27 @@ architecture diagrams are all included in this repo.
 ```
 RAG_System/
 ├── README.md                                    ← you are here
-├── Vectera_RAG_System_Technical_Assessment.pdf  ← the original brief
+├── Dockerfile · docker-compose.yml              ← optional containerised run
+├── setup.sh · setup.ps1                         ← one-command env + Snowflake bootstrap
+├── requirements.txt                             ← mirrored at root for Streamlit Cloud
 ├── app/                                         ← the application code
 │   ├── rag_system/                              ← Python package (~1.7k LoC)
-│   │   ├── config/                              ← typed settings
+│   │   ├── config/                              ← typed settings (pydantic)
 │   │   ├── ingest/                              ← Docling parse → chunk → embed
 │   │   ├── storage/                             ← Snowflake schema + DAO
 │   │   ├── retrieval/                           ← hybrid dense + lexical + RRF
 │   │   ├── generation/                          ← prompt + citations
 │   │   ├── llm_providers/                       ← swappable LLM/embed/vision
 │   │   └── ui/                                  ← Streamlit chat
-│   ├── eval/                                    ← Q&A set + run_eval.py
-│   ├── scripts/                                 ← bulk-ingest CLI + smoke tests
-│   ├── tests/
+│   ├── eval/                                    ← Q&A set, runner, RAGAS metrics, RESULTS.md
+│   ├── tests/                                   ← pytest (unit + integration)
+│   ├── scripts/                                 ← bulk-ingest CLI + ops helpers
 │   ├── .env.example                             ← copy to .env and fill in
-│   ├── Makefile
-│   ├── requirements.txt
-│   └── README.md                                ← deep technical notes
+│   ├── Makefile · pytest.ini · requirements.txt
 ├── Documents/                                   ← 10 source PDFs (the corpus)
-├── design/
-│   └── 01_system_design.md                      ← 17-section design doc
 └── docs/
-    ├── architecture.drawio                      ← editable system diagram
-    └── architecture.md                          ← Mermaid + per-stage notes
+    ├── architecture.drawio · architecture.md    ← system diagram (drawio + Mermaid)
+    └── streamlit_cloud_setup.md                 ← hosted deploy guide
 ```
 
 ---
@@ -89,7 +90,21 @@ cd RAG_System_vectera.ai
 
 ### 3. Set up the Python environment
 
-**Windows (PowerShell):**
+Pick **either** the helper script (recommended — does venv + deps + .env
+check + Snowflake schema init in one go) **or** the manual flow.
+
+**Helper script:**
+```bash
+./setup.sh           # macOS / Linux
+# OR
+.\setup.ps1          # Windows PowerShell
+```
+If `app/.env` doesn't exist, the script copies the example for you and
+asks you to fill it in (step 4 below), then re-run.
+
+**Manual venv:**
+
+Windows (PowerShell):
 ```powershell
 cd app
 python -m venv .venv
@@ -98,7 +113,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-**macOS / Linux (bash/zsh):**
+macOS / Linux:
 ```bash
 cd app
 python3 -m venv .venv
@@ -107,8 +122,17 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-> First install pulls down Docling (~2 GB with PyTorch deps) and
-> sentence-transformers. Plan for ~5 min on a fast connection.
+First install pulls down Docling + PyTorch + sentence-transformers
+(~2 GB total). Plan for ~5 min on a fast connection.
+
+**Or via Docker** (everything containerised — slower first build, fastest
+to run on a clean machine):
+
+```bash
+cp app/.env.example app/.env       # fill it in
+docker compose up                  # builds the image, runs at localhost:8501
+```
+The compose file persists the BGE / Docling model caches between rebuilds.
 
 ### 4. Configure credentials
 
@@ -184,27 +208,40 @@ Try these queries:
 | *Which REITs in this corpus focus on data centers?* | Cross-document reasoning |
 | *What is Apple's stock price today?* | Should refuse cleanly (out of corpus) |
 
-### 8. Run the eval
+### 8. Run the tests
 
 ```bash
-python -m eval.run_eval
+pytest                       # all tests; integration ones auto-skip if creds missing
+pytest tests/unit            # unit only — fast, no creds required
+pytest tests/integration     # integration only (needs Snowflake / Gemini / Cerebras)
 ```
 
-Reports Recall@k, MRR, must-contain rate, and refusal correctness against a
-14-question hand-written eval set.
+See [`app/tests/README.md`](app/tests/README.md) for the marker-driven
+skip policy.
+
+### 9. Run the eval
+
+```bash
+python -m eval.run_eval                 # core metrics only
+python -m eval.run_eval --ragas         # + RAGAS-style LLM-judge metrics (slower)
+```
+
+Latest results: **[`app/eval/RESULTS.md`](app/eval/RESULTS.md)** —
+Recall@8 82%, refusal correctness 100%, answer relevance 96%,
+faithfulness 70%.
 
 ---
 
 ## Key design choices
 
-| Choice | Why |
-|---|---|
-| **Snowflake** for storage + vector search | Use `VECTOR_COSINE_SIMILARITY` (pure SQL, works on every tier) + external embeddings. |
-| **Docling** for PDF parsing | Layout-aware, handles slide-heavy investor decks, outputs structured Markdown including tables. | best option for the OCR based page layout extraction and parsing comapred llama parse unstucctured.io and the charts/images can be translated to text with gemini api representation is extracted for each image from the pdf to make it searchable and answerable (kept for  optional now because of free rate limits) 
-| **Local BGE-base-en-v1.5** for embeddings | No API rate limits, runs locally. Earlier Gemini-based runs hit the 100 RPM free-tier limit constantly had to replace for this initial demo. |
-| **Cerebras `gpt-oss-120b`** for answer generation | Frontier-class OSS model served at very low latency. Free tier is generous enough for the demo. | Any model can be used on this layer/provider
-| **Hybrid retrieval (dense ∪ lexical, RRF fused)** | Investor decks are dense with tickers, metric acronyms (FFO, NOI, AFFO), and named figures — pure dense misses exact-string matches. RRF is parameter-free. |
-| **Page-aware chunking** | Citations need precise page numbers; tables are isolated so structured rows stay intact with meta data|
+| Choice | Why | Notes |
+|---|---|---|
+| **Snowflake** for storage + vector search | Uses `VECTOR_COSINE_SIMILARITY` (pure SQL, works on every tier) + external embeddings | Cortex AI is blocked on trial accounts, so we never depend on it |
+| **Docling** for PDF parsing | Layout-aware, handles slide-heavy investor decks, outputs structured Markdown including tables | Best of the layout-aware options (vs. LlamaParse / unstructured.io); chart images can be turned into searchable text via the optional Gemini vision pass |
+| **Local `BGE-base-en-v1.5`** for embeddings | No API rate limits, runs on CPU, same 768d that matches the Snowflake schema | Earlier Gemini embedding runs hit the 100 RPM free-tier limit constantly — local removes that variable |
+| **Cerebras `gpt-oss-120b`** for answer generation | Frontier-class OSS model served at very low latency, generous free tier | The LLM is a swappable layer — any of Cerebras / Gemini / OpenAI / Anthropic / OpenRouter can be selected at runtime from the UI |
+| **Hybrid retrieval (dense ∪ lexical, RRF fused)** | Investor decks are dense with tickers + metric acronyms (FFO, NOI, AFFO) — pure dense misses exact-string matches; pure lexical misses paraphrases | RRF is parameter-free and robust to score-scale differences |
+| **Page-aware chunking** | Citations need precise page numbers; tables are isolated as their own chunks so structured rows stay intact | Each chunk carries denormalized `company` + `doc_date` so filters push down to SQL |
 | **Strict citation prompt** | Forces `[N]` markers on every factual claim, requires attribution when sources disagree, refuses cleanly on insufficient evidence. |
 | **Streamlit chat UI (NotebookLM-style)** | Brief recommended Streamlit. Sidebar shows source toggles, source cards under each answer open a detail modal (Perplexity / NotebookLM pattern). |
 

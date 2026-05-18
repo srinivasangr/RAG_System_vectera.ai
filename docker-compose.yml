@@ -1,0 +1,24 @@
+# Convenience compose file: `docker compose up` builds and runs the app
+# with secrets loaded from app/.env. Same image as the bare Dockerfile.
+#
+# Prereq:  copy app/.env.example to app/.env and fill in your keys.
+
+services:
+  rag:
+    build: .
+    image: rag-system:latest
+    container_name: rag-system
+    ports:
+      - "8501:8501"
+    env_file:
+      - app/.env
+    # Cache the downloaded BGE / Docling models across rebuilds so the
+    # container doesn't redownload ~500 MB every time.
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+      - docling_cache:/root/.cache/docling
+    restart: unless-stopped
+
+volumes:
+  hf_cache:
+  docling_cache:
