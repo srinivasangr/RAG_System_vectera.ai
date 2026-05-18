@@ -12,6 +12,16 @@ diagrams are all included in this repo.
 
 ---
 
+## High-level architecture
+
+![architecture overview](docs/assets/architecture_overview.png)
+
+*Editable source:* [`docs/architecture.drawio`](docs/architecture.drawio) (open in [app.diagrams.net](https://app.diagrams.net) → File → Open).
+*Functional flow (Mermaid, renders inline):* [`docs/architecture.md`](docs/architecture.md).
+*Regenerate the PNG + drawio after a layout change:* `python docs/_build_diagram.py`.
+
+---
+
 ## What's in the box
 
 ```
