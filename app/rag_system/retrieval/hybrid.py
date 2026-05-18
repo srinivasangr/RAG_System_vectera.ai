@@ -1,6 +1,6 @@
 """Hybrid retrieval over Snowflake: dense cosine + lexical, fused with RRF.
 
-Why hybrid? Investor decks are dense with tickers, metric acronyms (FFO, NOI,
+Why hybrid? presentation decks are dense with tickers, metric acronyms (FFO, NOI,
 AFFO), company names, and specific numbers. Pure dense embeddings miss exact
 matches; pure keyword misses paraphrases. Reciprocal Rank Fusion combines both
 without needing tuned weights.

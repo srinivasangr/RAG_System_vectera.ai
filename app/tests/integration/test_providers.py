@@ -1,6 +1,5 @@
 """Integration tests for the modular LLM / embedding / vision providers.
 
-These need real API keys and live network. Auto-skipped when keys missing.
 """
 
 import pytest

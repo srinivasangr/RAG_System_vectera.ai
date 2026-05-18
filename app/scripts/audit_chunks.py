@@ -1,8 +1,4 @@
-"""Honest audit of what's stored: counts + samples by chunk_type.
 
-Tells the user what's working and what isn't (e.g. raw images aren't
-stored — only their text descriptions).
-"""
 
 import sys
 from pathlib import Path
