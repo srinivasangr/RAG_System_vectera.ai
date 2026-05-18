@@ -11,7 +11,7 @@ The two diagrams cover the same system; the drawio one foregrounds **who the ven
 
 ---
 
-## Functional flow (Mermaid)
+## Functional flow 
 
 ```mermaid
 flowchart TB

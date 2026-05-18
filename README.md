@@ -14,7 +14,91 @@ diagrams are all included in this repo.
 
 ![architecture overview](docs/assets/architecture_overview.png)
 
+### Functional flow
 
+```mermaid
+flowchart TB
+    user["👤 Analyst (Browser)<br/>natural-language questions"]:::user
+
+    subgraph UI["Streamlit UI · localhost:8501"]
+        direction LR
+        ui_sb["Sidebar<br/>· source toggles<br/>· upload (local only)<br/>· model picker"]:::ui
+        ui_q["Chat box"]:::ui
+        ui_a["Answer + source cards<br/>· [N] inline cites<br/>· latency · debug"]:::ui
+    end
+
+    subgraph QSVC["Query Service · rag_system.generation.query()"]
+        direction LR
+        s1["1 · Embed query<br/>local BGE-base-en-v1.5<br/>→ 768-d vector"]:::svc
+        s2["2 · Hybrid retrieve<br/>· Dense cosine top-30<br/>· Lexical LIKE top-30<br/>· RRF → top-K"]:::svc
+        s3["3 · Format prompt<br/>numbered [N] sources<br/>strict-citation system<br/>refusal path"]:::svc
+        s4["4 · LLM + cite parse<br/>Cerebras gpt-oss-120b<br/>(swappable)"]:::svc
+        s1 --> s2 --> s3 --> s4
+    end
+
+    subgraph ING["Ingestion · scripts/ingest_all_pending.py"]
+        direction LR
+        i1["Docling parse<br/>10-page batches<br/>OOM fallback 10→5→2"]:::ing
+        i2["Gemini Vision<br/>chart → text<br/>(optional)"]:::ing
+        i3["Page-aware chunk<br/>~800 tok / 100 ovl<br/>type: prose · table · chart"]:::ing
+        i4["Local BGE embed<br/>→ Snowflake upsert<br/>(idempotent by checksum)"]:::ing
+        i1 -- "chart images" --> i2
+        i1 --> i3
+        i2 --> i3
+        i3 --> i4
+    end
+
+    subgraph PROV["LLM Provider Abstraction"]
+        direction TB
+        base["Base*Provider interfaces<br/>+ factory: get_llm / get_embedder / get_vision"]:::prov
+        p_ce["⭐ Cerebras gpt-oss-120b<br/>(default LLM)"]:::provActive
+        p_ge["Gemini 2.5 Flash<br/>(vision · alt LLM)"]:::prov
+        p_oa["OpenAI · Anthropic · OpenRouter<br/>(if keys present)"]:::prov
+        local["⭐ Local BGE-base-en-v1.5<br/>(embedder — no rate limit)"]:::provActive
+    end
+
+    subgraph SF["Snowflake · RAG_DB.RAG_SCHEMA"]
+        direction LR
+        t_docs[("documents")]:::sf
+        t_ch[("chunks<br/>VECTOR(FLOAT, 768)")]:::sf
+        t_im[("chunk_images")]:::sf
+        t_log[("query_log")]:::sf
+    end
+
+    pdfs[/"📑 Source PDFs<br/>Documents/ — 11 REIT decks"/]:::pdf
+
+    %% Query plane
+    user --> UI
+    UI --> QSVC
+    QSVC -- "answer + cites" --> UI
+    s1 -.uses.-> local
+    s2 <-->|cosine + LIKE| t_ch
+    s4 ==>|default| p_ce
+    s4 -.->|log| t_log
+    t_im -- "PNG bytes<br/>for chart cites" --> ui_a
+
+    %% ============== FLOWS — INGEST (dashed) ==============
+    pdfs -. read .-> i1
+    i2 -. uses .-> p_ge
+    i4 -. uses .-> p_ge
+    i4 -. "upsert<br/>(idempotent)" .-> t_ch
+    i4 -. write .-> t_docs
+    i2 -. PNG .-> t_im
+
+    %% ============== STYLES ==============
+    classDef user fill:#dae8fc,stroke:#6c8ebf,color:#000
+    classDef ui fill:#fff2cc,stroke:#d6b656,color:#000
+    classDef svc fill:#d5e8d4,stroke:#82b366,color:#000
+    classDef ing fill:#fad7ac,stroke:#b46504,color:#000
+    classDef prov fill:#e1d5e7,stroke:#9673a6,color:#000
+    classDef provActive fill:#d5e8d4,stroke:#82b366,color:#000,stroke-width:3px
+    classDef sf fill:#cce5ff,stroke:#1c6ea4,color:#000
+    classDef pdf fill:#f8cecc,stroke:#b85450,color:#000
+```
+
+*Full architecture details → [`docs/architecture.md`](docs/architecture.md)*
+
+---
 
 ## Code structure
 
