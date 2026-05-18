@@ -45,10 +45,8 @@ def fake_pdf(tmp_path: Path) -> Path:
             "Realty Income", "O", date(2025, 12, 1), "Dec 2025", "investor_presentation"),
         ("VICI-Investor-Presentation-Mar-26_.pdf",
             "VICI Properties", "VICI", date(2026, 3, 1), "Mar 2026", "investor_presentation"),
-        # Genuinely undated
         ("BXP Morning Session Deck web.pdf",
             "Boston Properties", "BXP", None, None, "morning_session"),
-        # Third-party report
         ("Simon The Impact of Brick and Mortar Shopping.pdf",
             "Simon Property Group", "SPG", None, None, "third_party_report"),
     ],

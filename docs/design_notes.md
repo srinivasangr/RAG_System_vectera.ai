@@ -1,19 +1,14 @@
-# Design notes & interview talking points
+# Design notes
 
-Concise reference for design decisions, the tradeoffs they involve, and the
-vocabulary to use when describing them.
-
----
-
-## 1. The system in one paragraph
+# 1. The system
 
 A retrieval-augmented generation pipeline over a small corpus of PDF
-investor decks. PDFs are parsed with a layout-aware extractor, chunked
-with page boundaries preserved, embedded with a local sentence-transformer,
+ decks. PDFs are parsed with a layout-aware extractor, chunked
+with page boundaries preserved, embedded  a local sentence-transformer,
 and stored in Snowflake using its native `VECTOR(FLOAT, 768)` column.
 Queries run a hybrid retrieval (dense cosine + lexical `LIKE`, fused with
 Reciprocal Rank Fusion), then a strict-citation prompt sends the top-K
-chunks to a hosted LLM (Cerebras `gpt-oss-120b`). The UI is Streamlit;
+chunks to a hosted LLM. The UI is Streamlit;
 the same backend powers the eval harness and a future REST API.
 
 ---
@@ -25,11 +20,11 @@ the same backend powers the eval harness and a future REST API.
 | Storage + vector search | **Snowflake `VECTOR(FLOAT, 768)`** | Pinecone, Qdrant, Chroma, Weaviate | The brief required Snowflake. Beyond compliance, keeping metadata + vectors in one DB means filters push down to SQL and there's no second piece of infra to operate. |
 | PDF parser | **Docling** (IBM, OSS) | `pypdf` + `Camelot`, Unstructured.io, LlamaParse, Mistral OCR | Layout-aware, handles slide-heavy decks, outputs Markdown including tables, runs offline. No API rate limits, no per-page cost. |
 | Embedding model | **`BAAI/bge-base-en-v1.5`** (local, 768d) | Gemini `gemini-embedding-001`, OpenAI `text-embedding-3-small`, Snowflake Cortex `EMBED_TEXT_768` | Cortex is blocked on Snowflake trial; Gemini's 100 RPM free-tier limit was a constant source of failed ingests. Local removes the rate-limit variable, costs nothing, and 768d matches the schema. |
-| LLM (answer gen) | **Cerebras `gpt-oss-120b`** | OpenAI `gpt-4o-mini`, Anthropic `claude-sonnet-4`, Gemini `gemini-2.5-flash` | Frontier-class OSS model served at very low latency (~500 ms for short answers), generous free tier. The LLM is a swappable layer — any of the others is one dropdown change in the UI. |
+| LLM (answer gen) | **Cerebras `gpt-oss-120b`** | OpenAI `gpt-4o-mini`, Anthropic `claude-sonnet-4`, Gemini `gemini-2.5-flash` | Frontier-class OSS model served at very low latency (~500 ms for short answers), generous free tier. The LLM is a swappable layer — any of the others is one dropdown change in the UI. And which dont have access to tools or real time data aware and trained on open weights and easy to get grounded scores |
 | Retrieval | **Hybrid (dense ∪ lexical, RRF-fused)** | Dense-only (vector), Lexical-only (BM25/`LIKE`), Reranker as the only step | Investor decks are dense with tickers and metric acronyms (FFO, NOI, AFFO, ARR). Pure dense misses exact-string matches; pure lexical misses paraphrases. RRF combines both without parameter tuning. |
 | Chunking | **Page-aware, ~800 tokens / 100 overlap, table-isolating** | Fixed-size sliding window across pages, semantic chunking | Citations need precise page numbers. Tables get their own `chunk_type='table'` chunk so the structured rows stay intact rather than being chopped mid-row. |
 | Charts/figures | **Optional Gemini-vision-as-extractor → text** | True multimodal embeddings (ColPali, Nomic, Voyage Multimodal-3) | Multimodal embeddings need a GPU and a different vector space. The vision-LLM approach reuses the same text embedder + citation infra and works on free-tier APIs (it's just rate-limited at 5 RPM). |
-| UI | **Streamlit (synchronous upload)** | FastAPI + React, Flask + HTMX, Streamlit + background worker | The brief recommends Streamlit. Synchronous upload (blocks the UI for the parse-embed-store cycle) is rock-solid on Windows; the background-worker version had Docling-on-thread init races. |
+| UI | **Streamlit (synchronous upload)** | FastAPI + React, Flask + HTMX, Streamlit + background worker | Synchronous upload (blocks the UI for the parse-embed-store cycle) is rock-solid on Windows; the background-worker version had Docling-on-thread init races. |
 
 ---
 
@@ -101,7 +96,7 @@ the same backend powers the eval harness and a future REST API.
 
 ---
 
-## 6. The eval, in one paragraph
+## 6. The evals
 
 14 hand-written Q&A in `eval/questions.yaml`, tagged with `gold_pages`
 (for Recall@k and MRR), `must_contain` substrings (for Recall-style
@@ -114,29 +109,3 @@ Run with `python -m eval.run_eval --ragas`. Latest scores in
 
 ---
 
-## 7. Things to NOT say in the conversation
-
-- "I used LangChain" — we use exactly one helper from LangChain
-  (`RecursiveCharacterTextSplitter`) and nothing else. The orchestration,
-  retrieval, prompt formatting, and provider routing are all custom.
-- "RAGAS is a library we installed" — we wrote the LLM-judge prompts
-  ourselves in `eval/ragas_metrics.py`. Same methodology, no extra dep.
-- "We need a vector DB like Pinecone" — we use Snowflake's native VECTOR
-  column. Same primitives (cosine similarity), one fewer thing to operate.
-- "Multi-turn is implemented" — the UI tracks multiple messages per
-  chat but the LLM sees each query in isolation today.
-
----
-
-## 8. Common interview probes and short answers
-
-| Q | A |
-|---|---|
-| Why not just use BM25? | BM25 misses paraphrases. The retrieval-only quality on questions like *"how is data center demand growing?"* (where the deck phrases it as *"cloud transformation fundamentals"*) is markedly worse without dense embeddings. |
-| Why local embeddings if Gemini is free? | The 100 RPM free-tier limit kept halting bulk ingest. Local embedding (BGE on CPU) takes ~17 ms per chunk and has no quota. |
-| Why 768 dimensions specifically? | BGE-base is 768d, the Snowflake schema is `VECTOR(FLOAT, 768)`. The alternative 1024d (BGE-M3, multilingual) doesn't add value for an English-only financial corpus. |
-| How would you scale this to 1M chunks? | Two changes: (a) add an HNSW vector index in Snowflake's table (or move to a dedicated ANN store), (b) lexical search via Snowflake `SEARCH()` (full-text, gated on higher tiers) instead of `LIKE`. The retrieval API doesn't change. |
-| What if a question spans multiple docs that disagree? | The retriever doesn't filter; top-K pulls from any doc. The prompt forbids averaging or silent picking — the model must surface the disagreement with attribution. |
-| Why no reranker? | Eval shows it would be the biggest single quality lever (context precision currently ~9%). It was deferred for time; `bge-reranker-base` is a 30-min add. |
-| Why Streamlit and not React + FastAPI? | The brief recommends it, and the backend is decoupled enough (`generation/service.py::query()`) that a FastAPI route is a 15-line addition with no business-logic change. |
-| How do you prevent hallucination? | The prompt enforces `[N]` citations on every claim and explicitly refuses when evidence is insufficient. Citation parsing validates that every `[N]` resolves to a real chunk; mismatches are dropped. The RAGAS faithfulness metric measures the residual hallucination rate. |

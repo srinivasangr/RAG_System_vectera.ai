@@ -1,13 +1,12 @@
 # RAG System — Document Q&A
 
 A Retrieval-Augmented Generation system over a corpus of investor-presentation
-PDFs. Ask natural-language questions; get **source-grounded answers with
-inline citations** that link back to the exact page in the original document.
+PDFs. Ask natural-language questions; 
 
 > **Try it live →** [ragsystemchatbot.streamlit.app](https://ragsystemchatbot.streamlit.app/)
-> *(read-only — chats against 11 pre-ingested REIT investor decks; uploads disabled on the hosted version, see [docs/streamlit_cloud_setup.md](docs/streamlit_cloud_setup.md) for why)*
+> *(read-only — chats against  pre-ingested documents; uploads disabled on the hosted version, see [docs/streamlit_cloud_setup.md](docs/streamlit_cloud_setup.md) for why)*
 
-Built as a take-home assessment. The brief, source PDFs, and architecture
+The brief, source PDFs, and architecture
 diagrams are all included in this repo.
 
 ---
@@ -16,13 +15,9 @@ diagrams are all included in this repo.
 
 ![architecture overview](docs/assets/architecture_overview.png)
 
-*Editable source:* [`docs/architecture.drawio`](docs/architecture.drawio) (open in [app.diagrams.net](https://app.diagrams.net) → File → Open).
-*Functional flow (Mermaid, renders inline):* [`docs/architecture.md`](docs/architecture.md).
-*Regenerate the PNG + drawio after a layout change:* `python docs/_build_diagram.py`.
 
----
 
-## What's in the box
+## Code structure
 
 ```
 RAG_System/
@@ -46,7 +41,7 @@ RAG_System/
 │   ├── Makefile · pytest.ini · requirements.txt
 ├── Documents/                                   ← (gitignored) drop your own PDFs here
 └── docs/
-    ├── architecture.drawio · architecture.md    ← system diagram (drawio + Mermaid)
+    ├── architecture.drawio · architecture.md    ← system diagram 
     └── streamlit_cloud_setup.md                 ← hosted deploy guide
 ```
 
@@ -133,7 +128,7 @@ pip install -r requirements.txt
 ```
 
 First install pulls down Docling + PyTorch + sentence-transformers
-(~2 GB total). Plan for ~5 min on a fast connection.
+(~2 GB total). 
 
 **Or via Docker** (everything containerised — slower first build, fastest
 to run on a clean machine):
@@ -185,7 +180,6 @@ Idempotent — re-running is a no-op.
 
 ### 6. Ingest PDFs
 
-The source PDFs aren't in the repo (gitignored — size + copyright).
 **Drop your own PDFs into `Documents/`** (any folder of PDFs works — the
 default is the project's `Documents/` directory, configurable via the
 `DOCUMENTS_DIR` env var).
@@ -202,7 +196,7 @@ What this does:
 - For each pending PDF: parse → chunk → embed → upsert (one at a time)
 - Idempotent — re-running skips any PDF whose sha256 checksum is already in Snowflake
 
-**Expected runtime: ~2–3 min per typical investor deck** on a laptop
+**Expected runtime: ~2–3 min per document approx based on presentation pdfs** on a local machine pc
 (CPU-bound on Docling parse).
 
 Monitor progress from another terminal:
@@ -225,7 +219,7 @@ Try these queries:
 |---|---|
 | *What is Digital Realty's leverage ratio?* | Single-fact retrieval |
 | *How did Digital Realty change between Dec 2025 and Mar 2026?* | Version-aware comparison |
-| *Which REITs in this corpus focus on data centers?* | Cross-document reasoning |
+| *Which [document] in this corpus focus on data centers?* | Cross-document reasoning |
 | *What is Apple's stock price today?* | Should refuse cleanly (out of corpus) |
 
 ### 8. Run the tests
