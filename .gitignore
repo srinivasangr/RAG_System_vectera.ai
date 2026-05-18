@@ -78,5 +78,11 @@ memory/
 **/.cache/
 **/uploads/
 
+# ===========================================================================
+# Source PDFs — not in the repo (size + copyright). Reviewers either
+# query the pre-ingested hosted version or supply their own PDFs locally.
+# ===========================================================================
+Documents/
+
 # Anything starting with an underscore in scripts/ is an ad-hoc helper
 app/scripts/_*.py

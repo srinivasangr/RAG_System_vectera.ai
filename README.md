@@ -44,7 +44,7 @@ RAG_System/
 │   ├── scripts/                                 ← bulk-ingest CLI + ops helpers
 │   ├── .env.example                             ← copy to .env and fill in
 │   ├── Makefile · pytest.ini · requirements.txt
-├── Documents/                                   ← 10 source PDFs (the corpus)
+├── Documents/                                   ← (gitignored) drop your own PDFs here
 └── docs/
     ├── architecture.drawio · architecture.md    ← system diagram (drawio + Mermaid)
     └── streamlit_cloud_setup.md                 ← hosted deploy guide
@@ -183,7 +183,15 @@ Creates:
 
 Idempotent — re-running is a no-op.
 
-### 6. Ingest the 10 PDFs
+### 6. Ingest PDFs
+
+The source PDFs aren't in the repo (gitignored — size + copyright).
+**Drop your own PDFs into `Documents/`** (any folder of PDFs works — the
+default is the project's `Documents/` directory, configurable via the
+`DOCUMENTS_DIR` env var).
+
+If you just want to chat against an already-ingested corpus, skip this
+step and use the **hosted version** at the top of this README.
 
 ```bash
 python scripts/ingest_all_pending.py --no-vision
@@ -192,8 +200,10 @@ python scripts/ingest_all_pending.py --no-vision
 What this does:
 - Scans `../Documents/` for PDFs
 - For each pending PDF: parse → chunk → embed → upsert (one at a time)
+- Idempotent — re-running skips any PDF whose sha256 checksum is already in Snowflake
 
-**Expected runtime: 2-3 mins per document complexity** on a typical laptop (CPU-bound on Docling parse).
+**Expected runtime: ~2–3 min per typical investor deck** on a laptop
+(CPU-bound on Docling parse).
 
 Monitor progress from another terminal:
 ```bash
