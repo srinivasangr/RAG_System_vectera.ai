@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import base64 as _b64
 import logging
+import os
 import shutil
 import sys
 import uuid
@@ -20,6 +21,16 @@ if str(_APP_ROOT) not in sys.path:
     sys.path.insert(0, str(_APP_ROOT))
 
 import streamlit as st
+
+# On Streamlit Cloud, credentials live in st.secrets (TOML). Mirror them into
+# os.environ BEFORE importing anything that reads settings, so pydantic-settings
+# picks them up the same way it picks up .env locally.
+try:
+    for _k, _v in st.secrets.items():
+        if isinstance(_v, (str, int, float, bool)):
+            os.environ.setdefault(_k, str(_v))
+except Exception:
+    pass  # local dev: no secrets.toml; fall back to .env
 
 from rag_system.config import settings
 from rag_system.generation import query
@@ -39,11 +50,9 @@ from rag_system.storage.repository import (
     delete_document,
     get_chunk_image_b64,
 )
-# JobManager (background-thread ingest) is kept around for future use but
-# isn't called from the UI upload path anymore — Windows + Streamlit + Docling
-# had race conditions causing worker threads to silently die. The UI now runs
-# ingest synchronously in a `st.status()` block.
-from rag_system.ingest.pipeline import ingest_one
+# NOTE: ingest_one is imported lazily (inside the upload handler) so the
+# heavy Docling + PyTorch import chain doesn't fire on hosted/read-only
+# deployments where uploads are disabled.
 
 logging.basicConfig(level=logging.INFO)
 
@@ -603,13 +612,22 @@ _init_state()
 with st.sidebar:
     # === Sources ===
     st.markdown("### 📚 Sources")
-    uploaded_files = st.file_uploader(
-        "Upload PDFs",
-        type=["pdf"],
-        accept_multiple_files=True,
-        label_visibility="collapsed",
-        key="pdf_uploader",
-    )
+    if settings.is_hosted:
+        # Read-only hosted deployment: disable uploads to keep the instance
+        # within memory + storage limits.
+        st.caption(
+            "🔒 Uploads are disabled on the hosted version. "
+            "To add documents, run the app locally — see the README."
+        )
+        uploaded_files = None
+    else:
+        uploaded_files = st.file_uploader(
+            "Upload PDFs",
+            type=["pdf"],
+            accept_multiple_files=True,
+            label_visibility="collapsed",
+            key="pdf_uploader",
+        )
 
     # Synchronous ingest — blocks the UI for the duration of the upload but is
     # rock-solid on Windows (the background-thread version had Docling init
@@ -622,6 +640,9 @@ with st.sidebar:
         key="enable_vision_upload",
     )
     if uploaded_files:
+        # Lazy import — only pulled in when an actual upload happens.
+        from rag_system.ingest.pipeline import ingest_one
+
         new_files = [
             f for f in uploaded_files
             if f.file_id not in st.session_state._processed_uploads

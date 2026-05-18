@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     # --- Paths ---
     documents_dir: Path = Field(default=Path("../Documents"))
 
+    # --- Deployment mode ---
+    # Set to true on Streamlit Cloud (or any read-only host) to hide the upload
+    # UI. The hosted version queries the pre-ingested corpus; reviewers wanting
+    # to upload run the app locally.
+    is_hosted: bool = False
+
     @property
     def app_root(self) -> Path:
         return Path(__file__).resolve().parents[2]

@@ -1,0 +1,38 @@
+# --- Core ---
+python-dotenv>=1.0.1
+pydantic>=2.9.2
+pydantic-settings>=2.6.1
+structlog>=24.4.0
+
+# --- Snowflake ---
+# Connector only — Snowpark drops 3.13 support, and we don't need it
+snowflake-connector-python>=3.13.0
+
+# --- PDF parsing ---
+docling>=2.0.0           # primary parser: layout-aware text + tables → Markdown
+pypdf>=5.1.0             # checksum + page-count helpers
+pillow>=10.0.0           # image handling for vision pass
+
+# --- Chunking / tokenization ---
+langchain-text-splitters>=0.3.2
+tiktoken>=0.8.0
+
+# --- LLM providers (modular) ---
+openai>=1.57.0           # OpenAI + OpenRouter + Cerebras (OpenAI-compatible)
+anthropic>=0.40.0        # Claude
+google-genai>=2.0.0      # Gemini (new SDK; replaces deprecated google-generativeai)
+
+# --- Local embeddings (recommended path: no API quota, no rate limit) ---
+sentence-transformers>=3.0.0
+
+# --- UI ---
+streamlit>=1.40.2
+
+# --- Eval ---
+pyyaml>=6.0.2
+pandas>=2.2.3
+
+# --- Dev / testing ---
+pytest>=8.3.4
+pytest-cov>=6.0.0
+ruff>=0.8.4
