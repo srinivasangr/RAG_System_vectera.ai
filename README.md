@@ -1,7 +1,6 @@
 # RAG System — Document Q&A
 
-A Retrieval-Augmented Generation system over a corpus of investor-presentation
-PDFs. Ask natural-language questions; 
+A Retrieval-Augmented Generation system over a corpus of documents(PDFs). Ask natural-language questions; 
 
 > **Try it live →** [ragsystemchatbot.streamlit.app](https://ragsystemchatbot.streamlit.app/)
 > *(read-only — chats against  pre-ingested documents; uploads disabled on the hosted version, see [docs/streamlit_cloud_setup.md](docs/streamlit_cloud_setup.md) for why)*
