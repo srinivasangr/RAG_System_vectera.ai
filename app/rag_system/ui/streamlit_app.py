@@ -155,6 +155,17 @@ _CHUNK_TYPE_ICON = {
 }
 
 
+def _basename_any(p: str) -> str:
+    """Return just the filename, handling Windows or POSIX paths regardless of host OS.
+
+    Why: source_path may have been written on Windows (backslashes) and read on
+    Linux (where pathlib.Path treats `\\` as part of the name).
+    """
+    if not p:
+        return ""
+    return p.replace("\\", "/").rsplit("/", 1)[-1]
+
+
 def _source_card_label(c) -> str:
     """Short, two-line label rendered inside the source-card button."""
     icon = _CHUNK_TYPE_ICON.get(c.chunk_type, "📄")
@@ -237,7 +248,7 @@ def _show_citation_dialog(c) -> None:
     st.markdown(c.text)
 
     if c.source_path:
-        st.caption(f"📄 source PDF: `{Path(c.source_path).name}`")
+        st.caption(f"📄 source PDF: `{_basename_any(c.source_path)}`")
 
 
 def _autorename_if_needed(chat: Chat, first_msg: str) -> None:
@@ -267,7 +278,7 @@ def _list_documents() -> list[dict]:
     return [{
         "doc_id": doc_id,
         "source_path": src,
-        "name": Path(src).name if src else doc_id,
+        "name": _basename_any(src) if src else doc_id,
         "company": company,
         "version_label": version,
         "page_count": pages,
