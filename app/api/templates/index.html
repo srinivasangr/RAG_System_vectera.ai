@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG System — Ingestion Console</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◧</span>
+      <span>RAG System <em>· v2</em></span>
+    </div>
+    <div id="corpus-summary" class="corpus-summary">loading corpus…</div>
+  </header>
+
+  <main class="layout">
+    <!-- LEFT: ingest -->
+    <section class="panel">
+      <h2>Ingest a document</h2>
+      <p class="hint">Upload one PDF at a time and watch every stage run live.</p>
+
+      <form id="ingest-form">
+        <label class="filedrop" id="filedrop">
+          <input type="file" id="file" accept="application/pdf" hidden />
+          <span id="file-label">Choose a PDF…</span>
+        </label>
+
+        <div class="options">
+          <label class="opt">
+            <span>Ingest engine (identify + propositions)</span>
+            <select id="engine">
+              <option value="gemini|gemini-2.5-flash-lite">Gemini Flash-Lite (paid · fast)</option>
+              <option value="gemini|gemini-2.5-flash">Gemini Flash (paid)</option>
+              <option value="cerebras|">Cerebras gpt-oss-120b (free · rate-limited)</option>
+            </select>
+          </label>
+          <label class="opt-check">
+            <input type="checkbox" id="with_vision" checked />
+            <span>Vision pass (charts/maps → structured records)</span>
+          </label>
+          <label class="opt-check">
+            <input type="checkbox" id="with_propositions" checked />
+            <span>Proposition extraction (atomic facts)</span>
+          </label>
+        </div>
+
+        <button type="submit" id="ingest-btn" class="primary" disabled>Ingest</button>
+      </form>
+
+      <div id="progress" class="progress hidden">
+        <h3 id="progress-title">Ingesting…</h3>
+        <ol id="stages" class="stages"></ol>
+        <pre id="log" class="log"></pre>
+      </div>
+    </section>
+
+    <!-- RIGHT: corpus -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Corpus</h2>
+        <button id="refresh-docs" class="ghost">↻ Refresh</button>
+      </div>
+      <table class="docs">
+        <thead>
+          <tr><th>Entity</th><th>Type</th><th>As of</th><th>Pages</th>
+              <th>Ch</th><th>Pa</th><th>Pr</th><th>Tbl</th><th>Cht</th><th></th></tr>
+        </thead>
+        <tbody id="docs-body">
+          <tr><td colspan="10" class="empty">No documents yet.</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

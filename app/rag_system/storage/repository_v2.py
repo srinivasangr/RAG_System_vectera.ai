@@ -263,6 +263,70 @@ def insert_table_rows(rows, embeddings: list[list[float]], *, conn=None) -> int:
 # ---------------------------------------------------------------------------
 # Chart records (no embedding — retrieved by company + label/value match)
 # ---------------------------------------------------------------------------
+def list_documents(*, conn=None) -> list[dict]:
+    """List ingested documents with per-doc artifact counts (for the UI)."""
+    with _use_connection(conn) as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """SELECT d.doc_id, d.company, d.ticker, d.doc_type, d.as_of_date,
+                      d.doc_date, d.version_label, d.doc_family_id, d.page_count,
+                      d.ingested_at,
+                      (SELECT COUNT(*) FROM chunks       c WHERE c.doc_id=d.doc_id),
+                      (SELECT COUNT(*) FROM parent_chunks p WHERE p.doc_id=d.doc_id),
+                      (SELECT COUNT(*) FROM propositions  pr WHERE pr.doc_id=d.doc_id),
+                      (SELECT COUNT(*) FROM table_rows    t WHERE t.doc_id=d.doc_id),
+                      (SELECT COUNT(*) FROM chart_records cr WHERE cr.doc_id=d.doc_id)
+               FROM documents d
+               ORDER BY d.ingested_at DESC NULLS LAST, d.company"""
+        )
+        cols = ["doc_id", "company", "ticker", "doc_type", "as_of_date", "doc_date",
+                "version_label", "doc_family_id", "page_count", "ingested_at",
+                "chunks", "parents", "propositions", "table_rows", "chart_records"]
+        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        cur.close()
+    # JSON-friendly dates
+    for r in rows:
+        for k in ("as_of_date", "doc_date", "ingested_at"):
+            if r.get(k) is not None:
+                r[k] = str(r[k])
+    return rows
+
+
+def corpus_profile(*, conn=None) -> dict:
+    """Runtime corpus profile — what the corpus actually contains. Fed to the
+    router (domain-agnostic) and shown in the UI."""
+    with _use_connection(conn) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT DISTINCT doc_type FROM documents WHERE doc_type IS NOT NULL")
+        doc_types = sorted(r[0] for r in cur.fetchall())
+        cur.execute("SELECT DISTINCT company FROM documents WHERE company IS NOT NULL")
+        entities = sorted(r[0] for r in cur.fetchall())
+        cur.execute("SELECT MIN(as_of_date), MAX(as_of_date) FROM documents")
+        lo, hi = cur.fetchone()
+        cur.execute("SELECT COUNT(*) FROM documents")
+        n_docs = cur.fetchone()[0]
+        cur.close()
+    return {
+        "n_documents": n_docs,
+        "doc_types": doc_types,
+        "entities": entities,
+        "date_range": [str(lo) if lo else None, str(hi) if hi else None],
+    }
+
+
+def delete_document_v2(doc_id: str, *, conn=None) -> dict:
+    """Delete a document and all its v2 artifacts."""
+    with _use_connection(conn) as conn:
+        counts = delete_doc_artifacts_v2(doc_id, conn=conn)
+        cur = conn.cursor()
+        cur.execute("DELETE FROM documents WHERE doc_id=%s", (doc_id,))
+        counts["documents"] = cur.rowcount or 0
+        cur.execute("DELETE FROM ingest_checkpoints WHERE doc_id=%s", (doc_id,))
+        conn.commit()
+        cur.close()
+    return counts
+
+
 def insert_chart_records(records, *, conn=None) -> int:
     records = list(records)
     if not records:

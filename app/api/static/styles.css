@@ -1,0 +1,111 @@
+:root {
+  --bg: #0e1117;
+  --panel: #161b22;
+  --panel-2: #1c2230;
+  --border: #2a3140;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --accent: #4c8bf5;
+  --green: #3fb950;
+  --amber: #d29922;
+  --red: #f85149;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 22px; border-bottom: 1px solid var(--border); background: var(--panel);
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; }
+.brand .logo { color: var(--accent); font-size: 20px; }
+.brand em { color: var(--muted); font-style: normal; font-weight: 400; }
+.corpus-summary { color: var(--muted); font-size: 13px; }
+
+.layout {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+  padding: 18px 22px; max-width: 1400px; margin: 0 auto;
+}
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: 18px;
+}
+.panel h2 { margin: 0 0 4px; font-size: 16px; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; }
+.hint { color: var(--muted); margin: 0 0 14px; font-size: 13px; }
+
+.filedrop {
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px dashed var(--border); border-radius: 8px; padding: 22px;
+  cursor: pointer; color: var(--muted); transition: border-color .15s, color .15s;
+}
+.filedrop:hover { border-color: var(--accent); color: var(--text); }
+.filedrop.has-file { border-color: var(--green); color: var(--text); }
+
+.options { margin: 14px 0; display: flex; flex-direction: column; gap: 10px; }
+.opt { display: flex; flex-direction: column; gap: 4px; }
+.opt span { color: var(--muted); font-size: 12px; }
+.opt select {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px; font-size: 13px;
+}
+.opt-check { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 13px; }
+
+button { font-family: inherit; cursor: pointer; border-radius: 6px; }
+button.primary {
+  width: 100%; padding: 11px; background: var(--accent); color: #fff;
+  border: none; font-size: 14px; font-weight: 600;
+}
+button.primary:disabled { background: #30363d; color: var(--muted); cursor: not-allowed; }
+button.ghost {
+  background: transparent; color: var(--muted); border: 1px solid var(--border);
+  padding: 5px 10px; font-size: 12px;
+}
+button.ghost:hover { color: var(--text); border-color: var(--accent); }
+
+.progress { margin-top: 18px; }
+.progress.hidden, .hidden { display: none; }
+.progress h3 { font-size: 14px; margin: 0 0 12px; }
+
+.stages { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.stage {
+  display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px;
+  border-radius: 6px; background: var(--panel-2); border: 1px solid transparent;
+}
+.stage .ic { width: 18px; text-align: center; flex-shrink: 0; }
+.stage .name { font-weight: 600; min-width: 96px; }
+.stage .detail { color: var(--muted); font-size: 12px; }
+.stage.pending { opacity: .45; }
+.stage.active { border-color: var(--accent); }
+.stage.active .ic { color: var(--accent); }
+.stage.done .ic { color: var(--green); }
+.stage.error { border-color: var(--red); }
+.stage.error .ic { color: var(--red); }
+
+.log {
+  margin-top: 12px; max-height: 160px; overflow-y: auto;
+  background: #0b0e14; border: 1px solid var(--border); border-radius: 6px;
+  padding: 10px; font-family: var(--mono); font-size: 11px; color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.docs { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.docs th, .docs td { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+.docs th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+.docs td.empty { text-align: center; color: var(--muted); padding: 24px; }
+.docs .num { text-align: right; font-family: var(--mono); }
+.docs .pill {
+  display: inline-block; padding: 1px 7px; border-radius: 10px;
+  background: var(--panel-2); border: 1px solid var(--border); font-size: 11px;
+}
+.docs .del { color: var(--red); background: transparent; border: none; cursor: pointer; font-size: 14px; }

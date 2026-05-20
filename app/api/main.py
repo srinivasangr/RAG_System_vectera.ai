@@ -1,0 +1,171 @@
+"""FastAPI backend + minimal UI (one process).
+
+Endpoints
+  GET  /                          -> minimal UI (upload + live ingest monitor)
+  POST /api/ingest                -> upload a PDF, start ingestion, return job_id
+  GET  /api/ingest/{job}/stream   -> SSE live progress for a job
+  GET  /api/ingest/{job}          -> job snapshot (polling fallback)
+  GET  /api/documents             -> ingested docs + artifact counts
+  DELETE /api/documents/{doc_id}  -> delete a doc and its artifacts
+  GET  /api/corpus-profile        -> runtime corpus profile (domain-agnostic)
+  GET  /health                    -> liveness + dependency check
+
+Run from app/:  uvicorn api.main:app --reload --port 8000
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+from pathlib import Path
+
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from sse_starlette.sse import EventSourceResponse
+
+from api.jobs import registry
+from rag_system.config import settings
+
+log = logging.getLogger(__name__)
+
+_HERE = Path(__file__).parent
+_INDEX_HTML = (_HERE / "templates" / "index.html").read_text(encoding="utf-8")
+
+app = FastAPI(title="RAG System API", version="2.0")
+app.mount("/static", StaticFiles(directory=str(_HERE / "static")), name="static")
+
+
+# ---------------------------------------------------------------------------
+# UI
+# ---------------------------------------------------------------------------
+@app.get("/", response_class=HTMLResponse)
+async def index():
+    # The page is static HTML (no server-side variables); serve it directly.
+    return HTMLResponse(_INDEX_HTML)
+
+
+# ---------------------------------------------------------------------------
+# Health
+# ---------------------------------------------------------------------------
+@app.get("/health")
+async def health():
+    deps = {"snowflake": False}
+    try:
+        from rag_system.storage.db import get_connection
+        with get_connection() as conn:
+            conn.cursor().execute("SELECT 1")
+        deps["snowflake"] = True
+    except Exception as e:  # noqa: BLE001
+        deps["snowflake_error"] = str(e)[:200]
+    return {"status": "ok", "deps": deps}
+
+
+# ---------------------------------------------------------------------------
+# Ingestion
+# ---------------------------------------------------------------------------
+@app.post("/api/ingest")
+async def start_ingest(
+    file: UploadFile = File(...),
+    with_vision: bool = Form(True),
+    with_propositions: bool = Form(True),
+    llm_provider: str = Form(""),
+    llm_model: str = Form(""),
+):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(400, "Only .pdf files are supported.")
+
+    # Save into the corpus directory so the file is available for re-ingest.
+    settings.documents_path.mkdir(parents=True, exist_ok=True)
+    dest = settings.documents_path / file.filename
+    data = await file.read()
+    dest.write_bytes(data)
+
+    job = registry.create(file.filename)
+    options = {
+        "with_vision": with_vision,
+        "with_propositions": with_propositions,
+        "llm_provider": llm_provider or None,
+        "llm_model": llm_model or None,
+        "force": True,
+    }
+    registry.run(job, dest, options)
+    return {"job_id": job.job_id, "filename": file.filename, "options": options}
+
+
+@app.get("/api/ingest/{job_id}")
+async def ingest_snapshot(job_id: str):
+    job = registry.get(job_id)
+    if not job:
+        raise HTTPException(404, "job not found")
+    return {
+        "job_id": job.job_id, "filename": job.filename, "status": job.status,
+        "events": job.events, "result": job.result, "error": job.error,
+    }
+
+
+@app.get("/api/ingest/{job_id}/stream")
+async def ingest_stream(job_id: str):
+    job = registry.get(job_id)
+    if not job:
+        raise HTTPException(404, "job not found")
+
+    async def gen():
+        # Replay any events already produced (late-join safety)
+        replayed = 0
+        for ev in list(job.events):
+            yield {"data": json.dumps(ev)}
+            replayed += 1
+            if ev["event"] in ("done", "error"):
+                return
+        # Stream new events
+        while True:
+            new = job.drain_nowait()
+            for ev in new:
+                yield {"data": json.dumps(ev)}
+                if ev["event"] in ("done", "error"):
+                    return
+            if job.status in ("done", "error", "skipped") and not new:
+                # ensure terminal already sent; otherwise emit a final tick
+                return
+            await asyncio.sleep(0.25)
+
+    return EventSourceResponse(gen())
+
+
+@app.get("/api/jobs")
+async def list_jobs():
+    return [
+        {"job_id": j.job_id, "filename": j.filename, "status": j.status,
+         "result": j.result, "error": j.error}
+        for j in registry.list()
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Documents / corpus
+# ---------------------------------------------------------------------------
+@app.get("/api/documents")
+async def documents():
+    from rag_system.storage import repository_v2 as repo
+    try:
+        return repo.list_documents()
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.delete("/api/documents/{doc_id}")
+async def delete_document(doc_id: str):
+    from rag_system.storage import repository_v2 as repo
+    counts = repo.delete_document_v2(doc_id)
+    return {"deleted": doc_id, "counts": counts}
+
+
+@app.get("/api/corpus-profile")
+async def corpus_profile():
+    from rag_system.storage import repository_v2 as repo
+    try:
+        return repo.corpus_profile()
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse(status_code=500, content={"error": str(e)})

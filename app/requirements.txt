@@ -4,6 +4,13 @@ pydantic>=2.9.2
 pydantic-settings>=2.6.1
 structlog>=24.4.0
 
+# --- API + UI (v2: FastAPI backend serves REST + minimal streaming UI) ---
+fastapi>=0.110
+uvicorn>=0.27
+sse-starlette>=2.0
+python-multipart>=0.0.9   # multipart form uploads
+jinja2>=3.1
+
 # --- Snowflake ---
 # Connector only — Snowpark drops 3.13 support, and we don't need it
 snowflake-connector-python>=3.13.0

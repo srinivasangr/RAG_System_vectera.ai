@@ -1,6 +1,7 @@
 """Gemini provider: LLM + embeddings + vision (one SDK)."""
 
 import logging
+import os
 import time
 from typing import Sequence
 
@@ -22,12 +23,16 @@ from rag_system.llm_providers.base import (
 
 log = logging.getLogger(__name__)
 
-# Gemini free-tier hard limits we honor with client-side throttling:
-#   - gemini-embedding-001:   100 requests/minute (counted per ITEM in a batch)
-#   - gemini-2.5-flash vision:  5 requests/minute
-# We stay comfortably under so transient bursts don't trip 429.
-_EMBED_LIMITER  = RateLimiter(max_calls=80, window_s=60.0, name="gemini-embed")
-_VISION_LIMITER = RateLimiter(max_calls=4,  window_s=60.0, name="gemini-vision")
+# Client-side throttle caps. Defaults are FREE-TIER-SAFE (so a fresh checkout
+# never trips 429s), but are overridable via env for a paid key:
+#   - GEMINI_EMBED_RPM   (default 80)  — gemini-embedding free tier ~100/min
+#   - GEMINI_VISION_RPM  (default 4)   — gemini-2.5-flash vision free tier ~5/min
+# Paid Tier 1 allows ~1000+ RPM, so set GEMINI_VISION_RPM=100+ to stop the
+# vision pass being throttled to free-tier speed.
+_EMBED_RPM  = int(os.environ.get("GEMINI_EMBED_RPM", "80"))
+_VISION_RPM = int(os.environ.get("GEMINI_VISION_RPM", "4"))
+_EMBED_LIMITER  = RateLimiter(max_calls=_EMBED_RPM,  window_s=60.0, name="gemini-embed")
+_VISION_LIMITER = RateLimiter(max_calls=_VISION_RPM, window_s=60.0, name="gemini-vision")
 
 
 def _client() -> genai.Client:
