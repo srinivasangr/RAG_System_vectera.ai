@@ -43,6 +43,25 @@ from rag_system.storage.db import get_connection
 log = logging.getLogger(__name__)
 
 
+def _first_pages_text(pdf_path: Path, parsed, n: int = 3) -> str:
+    """Cover text for document identification.
+
+    Uses pypdf (fast, reliable for text PDFs). Docling's per-page provenance can
+    miss cover slides, so we only fall back to Docling markdown when pypdf yields
+    too little (image-only covers).
+    """
+    txt = ""
+    try:
+        from pypdf import PdfReader
+        for pg in PdfReader(str(pdf_path)).pages[:n]:
+            txt += (pg.extract_text() or "") + "\n"
+    except Exception:  # noqa: BLE001
+        txt = ""
+    if len(txt.strip()) < 100:
+        txt = "\n\n".join(p.markdown for p in parsed.pages[:n])
+    return txt
+
+
 def _chart_summary_chunks(records, parents_by_page, doc_id) -> list[ChunkV2]:
     """Synthesize one retrievable 'chart' child chunk per figure from its records.
 
@@ -122,7 +141,7 @@ def ingest_one_v2(
 
     # --- parse ---
     parsed = parse_pdf(pdf_path, progress_cb=progress_cb)
-    first_pages = "\n\n".join(p.markdown for p in parsed.pages[:2])
+    first_pages = _first_pages_text(pdf_path, parsed, n=3)
     _emit("parse_done", pages=parsed.page_count)
 
     # --- identify (domain-agnostic) ---
