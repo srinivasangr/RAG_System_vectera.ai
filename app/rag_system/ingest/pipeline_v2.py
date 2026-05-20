@@ -263,6 +263,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--vision-budget", type=int, default=None)
     p.add_argument("--force", action="store_true", help="ignore checkpoints")
     p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--llm-provider", type=str, default=None,
+                   help="LLM for identification + propositions (e.g. gemini). "
+                        "Defaults to configured provider. Use paid Gemini to avoid "
+                        "Cerebras free-tier rate limits.")
+    p.add_argument("--llm-model", type=str, default=None,
+                   help="LLM model name (e.g. gemini-2.5-flash-lite)")
     args = p.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO,
@@ -277,6 +283,11 @@ def main(argv: list[str] | None = None) -> int:
         print("No PDFs to process.")
         return 1
 
+    ingest_llm = None
+    if args.llm_provider or args.llm_model:
+        ingest_llm = get_llm(args.llm_provider, args.llm_model)
+        print(f"ingest LLM: {args.llm_provider or 'default'} / {args.llm_model or 'default'}")
+
     print(f"v2 ingesting {len(pdfs)} PDF(s) from {settings.documents_path}")
     results = []
     for pdf in pdfs:
@@ -286,6 +297,7 @@ def main(argv: list[str] | None = None) -> int:
                 with_propositions=not args.no_propositions,
                 vision_budget=args.vision_budget,
                 dry_run=args.dry_run, force=args.force,
+                llm=ingest_llm,
             ))
         except Exception as e:  # noqa: BLE001
             log.exception("FAILED %s", pdf.name)
