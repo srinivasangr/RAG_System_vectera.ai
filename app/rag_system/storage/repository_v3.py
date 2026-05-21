@@ -6,7 +6,9 @@ propositions/table_rows/checkpoints)."""
 from __future__ import annotations
 
 import json
-from rag_system.storage.repository_v2 import _use_connection, _vec  # reuse helpers
+from rag_system.storage.repository_v2 import (  # reuse helpers
+    _batched_vector_insert, _use_connection, _vec,
+)
 
 
 def upsert_document_v3(meta, file_meta: dict, page_count: int,
@@ -75,15 +77,14 @@ def insert_page_images(rows, *, conn=None) -> int:
         return 0
     with _use_connection(conn) as conn:
         cur = conn.cursor()
-        for r in rows:
-            cur.execute(
-                """INSERT INTO page_images
-                     (parent_id, doc_id, page_number, width, height, mime_type, image_b64)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s)""",
-                (r["parent_id"], r["doc_id"], r["page_number"],
-                 r.get("width"), r.get("height"), r.get("mime_type", "image/png"),
-                 r["image_b64"]),
-            )
+        cur.executemany(
+            """INSERT INTO page_images
+                 (parent_id, doc_id, page_number, width, height, mime_type, image_b64)
+               VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+            [(r["parent_id"], r["doc_id"], r["page_number"], r.get("width"),
+              r.get("height"), r.get("mime_type", "image/png"), r["image_b64"])
+             for r in rows],
+        )
         conn.commit()
         cur.close()
     return len(rows)
@@ -96,20 +97,20 @@ def insert_chart_records_v3(records, *, conn=None) -> int:
         return 0
     with _use_connection(conn) as conn:
         cur = conn.cursor()
-        for r in records:
-            cur.execute(
-                """INSERT INTO chart_records
-                     (record_id, chunk_id, doc_id, page_number, chart_id, chart_kind,
-                      label, value, unit, bbox, confidence, vision_model, description,
-                      company, doc_type, doc_date, as_of_date, doc_family_id)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                (r["record_id"], r.get("chunk_id"), r["doc_id"], r.get("page_number"),
-                 r.get("chart_id"), r.get("chart_kind"), r.get("label", ""),
-                 r.get("value", ""), r.get("unit", ""), r.get("bbox", ""),
-                 r.get("confidence", 0.0), r.get("vision_model", ""),
-                 r.get("description", ""), r.get("company"), r.get("doc_type"),
-                 r.get("doc_date"), r.get("as_of_date"), r.get("doc_family_id")),
-            )
+        cur.executemany(
+            """INSERT INTO chart_records
+                 (record_id, chunk_id, doc_id, page_number, chart_id, chart_kind,
+                  label, value, unit, bbox, confidence, vision_model, description,
+                  company, doc_type, doc_date, as_of_date, doc_family_id)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            [(r["record_id"], r.get("chunk_id"), r["doc_id"], r.get("page_number"),
+              r.get("chart_id"), r.get("chart_kind"), r.get("label", ""),
+              r.get("value", ""), r.get("unit", ""), r.get("bbox", ""),
+              r.get("confidence", 0.0), r.get("vision_model", ""),
+              r.get("description", ""), r.get("company"), r.get("doc_type"),
+              r.get("doc_date"), r.get("as_of_date"), r.get("doc_family_id"))
+             for r in records],
+        )
         conn.commit()
         cur.close()
     return len(records)
@@ -123,21 +124,26 @@ def insert_table_rows_v3(rows, embeddings, *, conn=None) -> int:
     if not rows:
         return 0
     dim = len(embeddings[0])
+    # columns_json needs PARSE_JSON(%s); embedding (vector) is placed LAST.
+    col_names = [
+        "row_id", "chunk_id", "doc_id", "page_number", "table_id", "row_idx",
+        "columns_json", "flat_text", "company", "doc_type", "doc_date",
+        "as_of_date", "doc_family_id", "embedding",
+    ]
+    col_exprs = ["%s", "%s", "%s", "%s", "%s", "%s", "PARSE_JSON(%s)", "%s",
+                 "%s", "%s", "%s", "%s", "%s"]
+    scalar_rows = [
+        (r["row_id"], r.get("chunk_id"), r["doc_id"], r.get("page_number"),
+         r.get("table_id"), r.get("row_idx"), json.dumps(r.get("columns", {})),
+         r.get("flat_text", ""), r.get("company"), r.get("doc_type"),
+         r.get("doc_date"), r.get("as_of_date"), r.get("doc_family_id"))
+        for r in rows
+    ]
     with _use_connection(conn) as conn:
         cur = conn.cursor()
-        for r, vec in zip(rows, embeddings):
-            cur.execute(
-                f"""INSERT INTO table_rows
-                     (row_id, chunk_id, doc_id, page_number, table_id, row_idx,
-                      columns_json, flat_text, embedding, company, doc_type,
-                      doc_date, as_of_date, doc_family_id)
-                   SELECT %s,%s,%s,%s,%s,%s, PARSE_JSON(%s), %s,
-                          {_vec(vec)}::VECTOR(FLOAT,{dim}), %s,%s,%s,%s,%s""",
-                (r["row_id"], r.get("chunk_id"), r["doc_id"], r.get("page_number"),
-                 r.get("table_id"), r.get("row_idx"), json.dumps(r.get("columns", {})),
-                 r.get("flat_text", ""), r.get("company"), r.get("doc_type"),
-                 r.get("doc_date"), r.get("as_of_date"), r.get("doc_family_id")),
-            )
+        _batched_vector_insert(cur, table="table_rows", col_names=col_names,
+                               col_exprs=col_exprs, rows=scalar_rows,
+                               embeddings=embeddings, dim=dim)
         conn.commit()
         cur.close()
     return len(rows)

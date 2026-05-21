@@ -33,6 +33,36 @@ def _vec(vec: Sequence[float]) -> str:
     return "[" + ",".join(f"{x:.8f}" for x in vec) + "]"
 
 
+def _batched_vector_insert(cur, *, table, col_names, col_exprs, rows, embeddings,
+                           dim, batch=40):
+    """Insert rows that include one VECTOR column, in batches.
+
+    VECTOR literals can't be bound, so each row is a `SELECT <exprs>, [v]::VECTOR`
+    and we UNION ALL up to `batch` of them into one INSERT — turning N network
+    round-trips into N/batch.
+
+    col_names : full column list, vector column LAST.
+    col_exprs : SQL expr per scalar column (each containing exactly one %s),
+                e.g. "%s" or "PARSE_JSON(%s)". len = len(col_names) - 1.
+    rows      : list of scalar param-tuples (one per row, in col_exprs order).
+    embeddings: parallel list of vectors.
+    """
+    assert len(rows) == len(embeddings)
+    cols_sql = "(" + ", ".join(col_names) + ")"
+    for i in range(0, len(rows), batch):
+        chunk_rows = rows[i:i + batch]
+        chunk_vecs = embeddings[i:i + batch]
+        selects, params = [], []
+        for scalars, vec in zip(chunk_rows, chunk_vecs):
+            selects.append(
+                "SELECT " + ", ".join(col_exprs)
+                + f", {_vec(vec)}::VECTOR(FLOAT,{dim})"
+            )
+            params.extend(scalars)
+        sql = f"INSERT INTO {table} {cols_sql} " + " UNION ALL ".join(selects)
+        cur.execute(sql, params)
+
+
 # ---------------------------------------------------------------------------
 # Checkpoints (per-stage resume)
 # ---------------------------------------------------------------------------
@@ -126,18 +156,8 @@ def delete_doc_artifacts_v2(doc_id: str, *, conn=None) -> dict:
     with _use_connection(conn) as conn:
         cur = conn.cursor()
         for tbl in ("propositions", "table_rows", "chart_records",
-                    "chunk_images", "chunks", "parent_images", "page_images",
-                    "document_files", "parent_chunks"):
-            if tbl == "parent_images":
-                cur.execute(
-                    "DELETE FROM parent_images WHERE parent_id IN "
-                    "(SELECT parent_id FROM parent_chunks WHERE doc_id=%s)", (doc_id,))
-            elif tbl == "chunk_images":
-                cur.execute(
-                    "DELETE FROM chunk_images WHERE chunk_id IN "
-                    "(SELECT chunk_id FROM chunks WHERE doc_id=%s)", (doc_id,))
-            else:
-                cur.execute(f"DELETE FROM {tbl} WHERE doc_id=%s", (doc_id,))
+                    "chunks", "page_images", "document_files", "parent_chunks"):
+            cur.execute(f"DELETE FROM {tbl} WHERE doc_id=%s", (doc_id,))
             counts[tbl] = cur.rowcount or 0
         conn.commit()
         cur.close()
@@ -153,16 +173,15 @@ def insert_parent_chunks(parents, *, conn=None) -> int:
         return 0
     with _use_connection(conn) as conn:
         cur = conn.cursor()
-        for p in parents:
-            cur.execute(
-                """INSERT INTO parent_chunks
-                     (parent_id, doc_id, page_number, slide_title, text, token_count,
-                      company, doc_type, doc_date, as_of_date, doc_family_id, version_label)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                (p.parent_id, p.doc_id, p.page_number, p.slide_title, p.text,
-                 p.token_count, p.company, p.doc_type, p.doc_date, p.as_of_date,
-                 p.doc_family_id, p.version_label),
-            )
+        cur.executemany(
+            """INSERT INTO parent_chunks
+                 (parent_id, doc_id, page_number, slide_title, text, token_count,
+                  company, doc_type, doc_date, as_of_date, doc_family_id, version_label)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            [(p.parent_id, p.doc_id, p.page_number, p.slide_title, p.text,
+              p.token_count, p.company, p.doc_type, p.doc_date, p.as_of_date,
+              p.doc_family_id, p.version_label) for p in parents],
+        )
         conn.commit()
         cur.close()
     return len(parents)
@@ -178,24 +197,26 @@ def insert_children_v2(children, embeddings: list[list[float]], *, conn=None) ->
     if not children:
         return 0
     dim = len(embeddings[0])
+    # Note column order: embedding is placed LAST (the vector column).
+    col_names = [
+        "chunk_id", "doc_id", "parent_id", "page_number", "chunk_index", "text",
+        "token_count", "chunk_type", "company", "doc_date", "version_label",
+        "footnote_text", "qualifier_text", "doc_type", "as_of_date", "doc_family_id",
+        "slide_title", "confidence", "kind_detail", "embedding",
+    ]
+    col_exprs = ["%s"] * (len(col_names) - 1)
+    rows = [
+        (ch.chunk_id, ch.doc_id, ch.parent_id, ch.page_number, ch.chunk_index,
+         ch.text, ch.token_count, ch.chunk_type, ch.company, ch.doc_date,
+         ch.version_label, ch.footnote_text, ch.qualifier_text, ch.doc_type,
+         ch.as_of_date, ch.doc_family_id, ch.slide_title,
+         getattr(ch, "confidence", None), getattr(ch, "kind_detail", None))
+        for ch in children
+    ]
     with _use_connection(conn) as conn:
         cur = conn.cursor()
-        for ch, vec in zip(children, embeddings):
-            cur.execute(
-                f"""INSERT INTO chunks
-                     (chunk_id, doc_id, parent_id, page_number, chunk_index, text,
-                      token_count, chunk_type, embedding, company, doc_date,
-                      version_label, footnote_text, qualifier_text, doc_type,
-                      as_of_date, doc_family_id, slide_title, confidence, kind_detail)
-                   SELECT %s,%s,%s,%s,%s,%s,%s,%s,
-                          {_vec(vec)}::VECTOR(FLOAT,{dim}),
-                          %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s""",
-                (ch.chunk_id, ch.doc_id, ch.parent_id, ch.page_number, ch.chunk_index,
-                 ch.text, ch.token_count, ch.chunk_type, ch.company, ch.doc_date,
-                 ch.version_label, ch.footnote_text, ch.qualifier_text, ch.doc_type,
-                 ch.as_of_date, ch.doc_family_id, ch.slide_title,
-                 getattr(ch, "confidence", None), getattr(ch, "kind_detail", None)),
-            )
+        _batched_vector_insert(cur, table="chunks", col_names=col_names,
+                               col_exprs=col_exprs, rows=rows, embeddings=embeddings, dim=dim)
         conn.commit()
         cur.close()
     return len(children)
@@ -211,21 +232,22 @@ def insert_propositions(props, embeddings: list[list[float]], *, conn=None) -> i
     if not props:
         return 0
     dim = len(embeddings[0])
+    col_names = [
+        "prop_id", "chunk_id", "parent_id", "doc_id", "page_number", "text",
+        "company", "doc_type", "doc_date", "as_of_date", "doc_family_id",
+        "version_label", "embedding",
+    ]
+    col_exprs = ["%s"] * (len(col_names) - 1)
+    rows = [
+        (p["prop_id"], p["chunk_id"], p["parent_id"], p["doc_id"], p["page_number"],
+         p["text"], p["company"], p["doc_type"], p["doc_date"], p["as_of_date"],
+         p["doc_family_id"], p["version_label"])
+        for p in props
+    ]
     with _use_connection(conn) as conn:
         cur = conn.cursor()
-        for p, vec in zip(props, embeddings):
-            cur.execute(
-                f"""INSERT INTO propositions
-                     (prop_id, chunk_id, parent_id, doc_id, page_number, text,
-                      embedding, company, doc_type, doc_date, as_of_date,
-                      doc_family_id, version_label)
-                   SELECT %s,%s,%s,%s,%s,%s,
-                          {_vec(vec)}::VECTOR(FLOAT,{dim}),
-                          %s,%s,%s,%s,%s,%s""",
-                (p["prop_id"], p["chunk_id"], p["parent_id"], p["doc_id"],
-                 p["page_number"], p["text"], p["company"], p["doc_type"],
-                 p["doc_date"], p["as_of_date"], p["doc_family_id"], p["version_label"]),
-            )
+        _batched_vector_insert(cur, table="propositions", col_names=col_names,
+                               col_exprs=col_exprs, rows=rows, embeddings=embeddings, dim=dim)
         conn.commit()
         cur.close()
     return len(props)

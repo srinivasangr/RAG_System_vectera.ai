@@ -27,9 +27,11 @@ from __future__ import annotations
 import argparse
 import base64
 import logging
+import os
 import re
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from rag_system.config import settings
@@ -166,34 +168,49 @@ def ingest_one_v3(
     if with_vision:
         visual_pages = [p for p in parsed.pages if _page_is_visual(p)]
         _emit("vision_start", total=len(visual_pages))
-        for n, page in enumerate(visual_pages, start=1):
-            try:
-                png, w, h = render_page_png(str(pdf_path), page.page_number)
-            except Exception as e:  # noqa: BLE001
-                log.warning("render failed p%s: %s", page.page_number, e)
-                continue
-            parent = parents_by_page.get(page.page_number)
+        workers = int(os.environ.get("VISION_CONCURRENCY", "5"))
+
+        def _work(page):
+            """Render + vision one page (runs in a worker thread → parallel API calls)."""
+            png, w, h = render_page_png(str(pdf_path), page.page_number)
+            _summary, elements = extract_page_elements(png, model=vision_model, vision=vision)
             try:
                 jpg, jw, jh = _png_to_jpeg_thumb(png)
-            except Exception:  # noqa: BLE001 — fall back to PNG if PIL hiccups
+            except Exception:  # noqa: BLE001
                 jpg, jw, jh = png, w, h
+            return page, (jpg, jw, jh), elements
+
+        results = []
+        done = 0
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            futs = {ex.submit(_work, p): p for p in visual_pages}
+            for fut in as_completed(futs):
+                try:
+                    results.append(fut.result())
+                except Exception as e:  # noqa: BLE001
+                    log.warning("vision page failed: %s", e)
+                done += 1
+                _emit("vision_progress", done=done, total=len(visual_pages))
+
+        # Process in page order so chunk ids are deterministic.
+        results.sort(key=lambda r: r[0].page_number)
+        for page, (jpg, jw, jh), elements in results:
+            parent = parents_by_page.get(page.page_number)
             page_images.append({
                 "parent_id": parent.parent_id if parent else f"{doc_id}::p{page.page_number:03d}",
                 "doc_id": doc_id, "page_number": page.page_number,
                 "width": jw, "height": jh, "mime_type": "image/jpeg",
                 "image_b64": base64.b64encode(jpg).decode("ascii"),
             })
-            summary, elements = extract_page_elements(png, model=vision_model, vision=vision)
             for el in elements:
-                _emit_el = _route_element(
+                routed = _route_element(
                     el, doc_id=doc_id, page=page, parents_by_page=parents_by_page,
                     meta=meta, vis_idx=vis_idx,
                 )
                 vis_idx += 1
-                children.extend(_emit_el["chunks"])
-                table_rows.extend(_emit_el["table_rows"])
-                chart_records.extend(_emit_el["chart_records"])
-            _emit("vision_progress", done=n, total=len(visual_pages), described=vis_idx)
+                children.extend(routed["chunks"])
+                table_rows.extend(routed["table_rows"])
+                chart_records.extend(routed["chart_records"])
         _emit("vision_done", records=len(chart_records), figures=vis_idx,
               pages=len(visual_pages))
         if not dry_run:
