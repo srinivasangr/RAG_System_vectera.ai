@@ -116,6 +116,17 @@ def insert_chart_records_v3(records, *, conn=None) -> int:
     return len(records)
 
 
+def get_page_image(parent_id: str, *, conn=None):
+    """Return (mime_type, image_b64) for a page, or None."""
+    with _use_connection(conn) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT mime_type, image_b64 FROM page_images WHERE parent_id=%s",
+                    (parent_id,))
+        row = cur.fetchone()
+        cur.close()
+    return (row[0], row[1]) if row and row[1] else None
+
+
 def insert_table_rows_v3(rows, embeddings, *, conn=None) -> int:
     """rows: list of dicts; embeddings parallel list. Writes table_rows."""
     rows = list(rows)

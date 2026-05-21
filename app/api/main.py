@@ -169,3 +169,55 @@ async def corpus_profile():
         return repo.corpus_profile()
     except Exception as e:  # noqa: BLE001
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# ---------------------------------------------------------------------------
+# Query (ask)
+# ---------------------------------------------------------------------------
+@app.post("/api/query")
+async def query(payload: dict):
+    """Run a question end-to-end and return answer + numbered sources + trace."""
+    q = (payload.get("query") or "").strip()
+    if not q:
+        raise HTTPException(400, "empty query")
+    provider = payload.get("provider") or "gemini"
+    model = payload.get("model") or "gemini-2.5-flash"
+
+    from rag_system.generation.generate_v2 import answer_query
+
+    def _run():
+        return answer_query(q, provider=provider, model=model)
+
+    a = await asyncio.to_thread(_run)
+    cited = set(a.cited_numbers)
+    sources = [{
+        "n": i, "company": s.company, "doc_type": s.doc_type,
+        "page_number": s.page_number,
+        "as_of_date": str(s.as_of_date) if s.as_of_date else None,
+        "version_label": s.version_label, "slide_title": s.slide_title,
+        "parent_id": s.parent_id, "doc_id": s.doc_id,
+        "snippet": (s.text or "")[:400],
+        "cited": i in cited,
+        "conflict_group": s.conflict_group,
+    } for i, s in enumerate(a.sources, start=1)]
+    return {
+        "question": a.question, "answer": a.answer,
+        "intent": getattr(a.plan, "intent", None),
+        "sub_queries": getattr(a.plan, "sub_queries", []),
+        "cited_numbers": a.cited_numbers, "conflicts": a.conflicts,
+        "engine": f"{a.llm_provider}/{a.llm_model}",
+        "timings": a.timings, "sources": sources,
+    }
+
+
+@app.get("/api/page-image/{parent_id}")
+async def page_image(parent_id: str):
+    """Serve the stored page thumbnail for a citation."""
+    import base64
+    from fastapi.responses import Response
+    from rag_system.storage import repository_v3 as repo3
+    img = repo3.get_page_image(parent_id)
+    if not img:
+        raise HTTPException(404, "no image")
+    mime, b64 = img
+    return Response(content=base64.b64decode(b64), media_type=mime or "image/jpeg")

@@ -24,16 +24,109 @@ window.addEventListener("DOMContentLoaded", () => {
   loadProfile();
   loadDocuments();
 
+  // tabs
+  document.querySelectorAll(".tab").forEach((b) =>
+    b.addEventListener("click", () => switchView(b.dataset.view)));
+
+  // ask
+  $("ask-form").addEventListener("submit", onAsk);
+
+  // ingest
   $("file").addEventListener("change", (e) => {
     selectedFile = e.target.files[0] || null;
     $("file-label").textContent = selectedFile ? selectedFile.name : "Choose a PDF…";
     $("filedrop").classList.toggle("has-file", !!selectedFile);
     $("ingest-btn").disabled = !selectedFile;
   });
-
   $("ingest-form").addEventListener("submit", onIngest);
   $("refresh-docs").addEventListener("click", () => { loadDocuments(); loadProfile(); });
+
+  // modal
+  $("modal-close").addEventListener("click", () => $("modal").classList.add("hidden"));
+  $("modal").addEventListener("click", (e) => { if (e.target.id === "modal") $("modal").classList.add("hidden"); });
 });
+
+function switchView(view) {
+  document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+  $("view-ask").classList.toggle("hidden", view !== "ask");
+  $("view-ingest").classList.toggle("hidden", view !== "ingest");
+  if (view === "ingest") { loadDocuments(); loadProfile(); }
+}
+
+// ---------------------------------------------------------------------------
+// Ask
+// ---------------------------------------------------------------------------
+async function onAsk(e) {
+  e.preventDefault();
+  const q = $("q").value.trim();
+  if (!q) return;
+  const [provider, model] = $("ask-engine").value.split("|");
+
+  $("ask-btn").disabled = true;
+  $("answer-wrap").classList.add("hidden");
+  const st = $("ask-status");
+  st.classList.remove("hidden");
+  st.textContent = "Retrieving + reasoning… (router → multi-source → rerank → generate)";
+
+  let r;
+  try {
+    r = await (await fetch("/api/query", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: q, provider, model }),
+    })).json();
+  } catch (err) {
+    st.textContent = "Error: " + err; $("ask-btn").disabled = false; return;
+  }
+  if (r.error || !r.answer) { st.textContent = "Error: " + (r.error || "no answer"); $("ask-btn").disabled = false; return; }
+
+  st.classList.add("hidden");
+  $("answer-wrap").classList.remove("hidden");
+
+  const t = r.timings || {};
+  $("answer-meta").innerHTML =
+    `<span class="pill">${esc(r.intent || "")}</span> ` +
+    `<span class="pill">${esc(r.engine || "")}</span> ` +
+    `<span class="dim">retrieve ${t.retrieve_ms || "?"}ms · rerank ${t.rerank_ms || "?"}ms · gen ${t.generate_ms || "?"}ms · ${r.sources.length} sources</span>`;
+
+  $("answer").innerHTML = renderAnswer(r.answer, new Set(r.cited_numbers || []));
+
+  $("conflicts").innerHTML = (r.conflicts && r.conflicts.length)
+    ? `⚠ Conflicting versions surfaced: ` + r.conflicts.map((c) =>
+        `<b>${esc(c.company)}</b> (${c.as_of_dates.join(", ")})`).join(" · ")
+    : "";
+
+  $("sources").innerHTML = r.sources.map((s) => `
+    <div class="src ${s.cited ? "cited" : ""}">
+      <div class="src-h">
+        <span class="src-n">[${s.n}]</span>
+        <b>${esc(s.company || "?")}</b>
+        <span class="pill">${esc(s.doc_type || "")}</span>
+        <span class="dim">p.${s.page_number} · as of ${esc(s.as_of_date || "—")}</span>
+        ${s.conflict_group ? '<span class="warn">⚠ version</span>' : ""}
+      </div>
+      <div class="src-title">${esc(s.slide_title || "")}</div>
+      <div class="src-snip">${esc(s.snippet || "")}</div>
+      <button class="src-img-btn" data-pid="${esc(s.parent_id)}" data-label="${esc((s.company||'')+' p.'+s.page_number)}">🔍 view source page</button>
+    </div>`).join("");
+  $("sources").querySelectorAll(".src-img-btn").forEach((b) =>
+    b.addEventListener("click", () => showPage(b.dataset.pid, b.dataset.label)));
+
+  $("ask-btn").disabled = false;
+}
+
+// highlight [N] / [N,M] citation markers
+function renderAnswer(text, cited) {
+  const escd = esc(text);
+  return escd.replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, (m) =>
+    `<span class="cite">${m}</span>`).replace(/\n/g, "<br>");
+}
+
+function showPage(parentId, label) {
+  $("modal-body").innerHTML =
+    `<div class="modal-label">${esc(label)}</div>` +
+    `<img class="modal-img" src="/api/page-image/${encodeURIComponent(parentId)}" alt="source page" />`;
+  $("modal").classList.remove("hidden");
+}
 
 // ---------------------------------------------------------------------------
 // Corpus profile + documents

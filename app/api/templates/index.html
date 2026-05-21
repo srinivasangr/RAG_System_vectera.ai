@@ -3,30 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RAG System — Ingestion Console</title>
+  <title>RAG System — Document Q&A</title>
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <span class="logo">◧</span>
-      <span>RAG System <em>· v2</em></span>
-    </div>
-    <div id="corpus-summary" class="corpus-summary">loading corpus…</div>
+    <div class="brand"><span class="logo">◧</span><span>RAG System <em>· v2</em></span></div>
+    <nav class="tabs">
+      <button class="tab active" data-view="ask">Ask</button>
+      <button class="tab" data-view="ingest">Ingest &amp; Corpus</button>
+    </nav>
+    <div id="corpus-summary" class="corpus-summary">loading…</div>
   </header>
 
-  <main class="layout">
-    <!-- LEFT: ingest -->
+  <!-- ===================== ASK ===================== -->
+  <main id="view-ask" class="view">
+    <section class="panel ask-panel">
+      <form id="ask-form" class="ask-form">
+        <input id="q" class="q-input" type="text" autocomplete="off"
+               placeholder="Ask about the documents… e.g. What is BXP's 2026 occupancy?" />
+        <select id="ask-engine" class="ask-engine">
+          <option value="gemini|gemini-2.5-flash">Gemini 2.5 Flash</option>
+          <option value="gemini|gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite</option>
+          <option value="cerebras|">Cerebras gpt-oss-120b</option>
+        </select>
+        <button id="ask-btn" class="primary" type="submit">Ask</button>
+      </form>
+
+      <div id="ask-status" class="ask-status hidden"></div>
+
+      <div id="answer-wrap" class="answer-wrap hidden">
+        <div class="answer-meta" id="answer-meta"></div>
+        <div class="answer" id="answer"></div>
+        <div id="conflicts" class="conflicts"></div>
+        <h3 class="sources-h">Sources</h3>
+        <div id="sources" class="sources"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== INGEST ===================== -->
+  <main id="view-ingest" class="view layout hidden">
     <section class="panel">
       <h2>Ingest a document</h2>
       <p class="hint">Upload one PDF at a time and watch every stage run live.</p>
-
       <form id="ingest-form">
         <label class="filedrop" id="filedrop">
           <input type="file" id="file" accept="application/pdf" hidden />
           <span id="file-label">Choose a PDF…</span>
         </label>
-
         <div class="options">
           <label class="opt">
             <span>Ingest engine (identify + propositions · vision always uses Gemini)</span>
@@ -36,19 +61,13 @@
               <option value="cerebras|">Cerebras gpt-oss-120b (free · rate-limited)</option>
             </select>
           </label>
-          <label class="opt-check">
-            <input type="checkbox" id="with_vision" checked />
-            <span>Vision pass (charts/maps → structured records)</span>
-          </label>
-          <label class="opt-check">
-            <input type="checkbox" id="with_propositions" checked />
-            <span>Proposition extraction (atomic facts)</span>
-          </label>
+          <label class="opt-check"><input type="checkbox" id="with_vision" checked />
+            <span>Vision pass (charts/maps → structured records)</span></label>
+          <label class="opt-check"><input type="checkbox" id="with_propositions" checked />
+            <span>Proposition extraction (atomic facts)</span></label>
         </div>
-
         <button type="submit" id="ingest-btn" class="primary" disabled>Ingest</button>
       </form>
-
       <div id="progress" class="progress hidden">
         <h3 id="progress-title">Ingesting…</h3>
         <ol id="stages" class="stages"></ol>
@@ -56,23 +75,24 @@
       </div>
     </section>
 
-    <!-- RIGHT: corpus -->
     <section class="panel">
-      <div class="panel-head">
-        <h2>Corpus</h2>
-        <button id="refresh-docs" class="ghost">↻ Refresh</button>
-      </div>
+      <div class="panel-head"><h2>Corpus</h2>
+        <button id="refresh-docs" class="ghost">↻ Refresh</button></div>
       <table class="docs">
-        <thead>
-          <tr><th>Entity</th><th>Type</th><th>As of</th><th>Pages</th>
-              <th>Ch</th><th>Pa</th><th>Pr</th><th>Tbl</th><th>Cht</th><th></th></tr>
-        </thead>
+        <thead><tr><th>Entity</th><th>Type</th><th>As of</th><th>Pages</th>
+          <th>Ch</th><th>Pa</th><th>Pr</th><th>Tbl</th><th>Cht</th><th></th></tr></thead>
         <tbody id="docs-body">
           <tr><td colspan="10" class="empty">No documents yet.</td></tr>
         </tbody>
       </table>
     </section>
   </main>
+
+  <!-- citation modal -->
+  <div id="modal" class="modal hidden"><div class="modal-box">
+    <button id="modal-close" class="modal-close">✕</button>
+    <div id="modal-body"></div>
+  </div></div>
 
   <script src="/static/app.js"></script>
 </body>
