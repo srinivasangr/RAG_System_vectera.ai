@@ -75,8 +75,9 @@ class AnswerV2:
 
 # Generation provider fallback chain (architecture §7). On a transient failure
 # (503 high-demand / rate limit) we retry the next engine so a single query
-# doesn't fail. Order: the caller's llm → Gemini flash-lite → Cerebras.
-_FALLBACK_CHAIN = [("gemini", "gemini-3.1-flash-lite"), ("cerebras", None)]
+# doesn't fail. Both engines are paid Gemini (reliable); Cerebras free-tier was
+# dropped — it rate-limited and never won the race in practice.
+_FALLBACK_CHAIN = [("gemini", "gemini-3.1-flash-lite"), ("gemini", "gemini-2.5-flash")]
 
 
 def _generate_with_fallback(messages, primary_llm, *, max_tokens):
@@ -141,13 +142,21 @@ def answer_query(
     model: str | None = None,
     top_k: int | None = None,
     filters: RetrievalFilters | None = None,
+    progress_cb=None,
 ) -> AnswerV2:
     """End-to-end: retrieve → conflict-aware generate → parse citations."""
     t0 = time.perf_counter()
     llm = llm or get_llm(provider, model)
 
+    def _emit(stage):
+        if progress_cb:
+            try:
+                progress_cb(stage)
+            except Exception:
+                pass
+
     # 1) Retrieve (router uses the same llm)
-    rr = retrieve(query, filters=filters, top_k=top_k, llm=llm)
+    rr = retrieve(query, filters=filters, top_k=top_k, llm=llm, progress_cb=progress_cb)
 
     # 2) No sources → honest refusal
     if not rr.sources:
@@ -164,6 +173,7 @@ def answer_query(
     user = f"QUESTION:\n{query}\n\nSOURCES:\n{src_block}"
     messages = [Message(role="system", content=SYSTEM_PROMPT),
                 Message(role="user", content=user)]
+    _emit("generating")
     tg = time.perf_counter()
     gen_provider, gen_model, chain = getattr(llm, "name", "?"), model or "", []
     try:

@@ -17,15 +17,25 @@
   </header>
 
   <!-- ===================== ASK ===================== -->
-  <main id="view-ask" class="view">
-    <section class="panel ask-panel">
+  <main id="view-ask" class="view ask-layout">
+    <aside class="ask-sidebar panel">
+      <div class="side-h">
+        <span>Search in</span>
+        <span class="side-actions">
+          <button id="sel-all" class="linkbtn" type="button">all</button>·
+          <button id="sel-none" class="linkbtn" type="button">none</button>
+        </span>
+      </div>
+      <div id="doc-filter" class="doc-filter">loading…</div>
+    </aside>
+
+    <section class="panel ask-main">
       <form id="ask-form" class="ask-form">
         <input id="q" class="q-input" type="text" autocomplete="off"
                placeholder="Ask about the documents… e.g. What is BXP's 2026 occupancy?" />
         <select id="ask-engine" class="ask-engine">
           <option value="gemini|gemini-2.5-flash">Gemini 2.5 Flash</option>
           <option value="gemini|gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite</option>
-          <option value="cerebras|">Cerebras gpt-oss-120b</option>
         </select>
         <button id="ask-btn" class="primary" type="submit">Ask</button>
       </form>
@@ -58,7 +68,6 @@
             <select id="engine">
               <option value="gemini|gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite (paid · fast)</option>
               <option value="gemini|gemini-2.5-flash">Gemini 2.5 Flash (paid)</option>
-              <option value="cerebras|">Cerebras gpt-oss-120b (free · rate-limited)</option>
             </select>
           </label>
           <label class="opt-check"><input type="checkbox" id="with_vision" checked />

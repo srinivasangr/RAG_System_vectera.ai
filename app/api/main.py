@@ -174,6 +174,36 @@ async def corpus_profile():
 # ---------------------------------------------------------------------------
 # Query (ask)
 # ---------------------------------------------------------------------------
+def _answer_to_dict(a) -> dict:
+    cited = set(a.cited_numbers)
+    sources = [{
+        "n": i, "company": s.company, "doc_type": s.doc_type,
+        "page_number": s.page_number,
+        "as_of_date": str(s.as_of_date) if s.as_of_date else None,
+        "version_label": s.version_label, "slide_title": s.slide_title,
+        "filename": s.filename,
+        "parent_id": s.parent_id, "doc_id": s.doc_id,
+        "snippet": (s.text or "")[:400],
+        "cited": i in cited,
+        "conflict_group": s.conflict_group,
+    } for i, s in enumerate(a.sources, start=1)]
+    # provider_chain isn't JSON-critical; keep timings lean for the wire
+    timings = {k: v for k, v in (a.timings or {}).items() if k != "provider_chain"}
+    return {
+        "question": a.question, "answer": a.answer,
+        "intent": getattr(a.plan, "intent", None),
+        "sub_queries": getattr(a.plan, "sub_queries", []),
+        "cited_numbers": a.cited_numbers, "conflicts": a.conflicts,
+        "engine": f"{a.llm_provider}/{a.llm_model}",
+        "timings": timings, "sources": sources,
+    }
+
+
+def _build_filters(doc_ids):
+    from rag_system.retrieval.filters import RetrievalFilters
+    return RetrievalFilters(doc_ids=list(doc_ids or []))
+
+
 @app.post("/api/query")
 async def query(payload: dict):
     """Run a question end-to-end and return answer + numbered sources + trace."""
@@ -182,32 +212,61 @@ async def query(payload: dict):
         raise HTTPException(400, "empty query")
     provider = payload.get("provider") or "gemini"
     model = payload.get("model") or "gemini-2.5-flash"
+    filters = _build_filters(payload.get("doc_ids"))
 
     from rag_system.generation.generate_v2 import answer_query
+    a = await asyncio.to_thread(
+        lambda: answer_query(q, provider=provider, model=model, filters=filters))
+    return _answer_to_dict(a)
 
-    def _run():
-        return answer_query(q, provider=provider, model=model)
 
-    a = await asyncio.to_thread(_run)
-    cited = set(a.cited_numbers)
-    sources = [{
-        "n": i, "company": s.company, "doc_type": s.doc_type,
-        "page_number": s.page_number,
-        "as_of_date": str(s.as_of_date) if s.as_of_date else None,
-        "version_label": s.version_label, "slide_title": s.slide_title,
-        "parent_id": s.parent_id, "doc_id": s.doc_id,
-        "snippet": (s.text or "")[:400],
-        "cited": i in cited,
-        "conflict_group": s.conflict_group,
-    } for i, s in enumerate(a.sources, start=1)]
-    return {
-        "question": a.question, "answer": a.answer,
-        "intent": getattr(a.plan, "intent", None),
-        "sub_queries": getattr(a.plan, "sub_queries", []),
-        "cited_numbers": a.cited_numbers, "conflicts": a.conflicts,
-        "engine": f"{a.llm_provider}/{a.llm_model}",
-        "timings": a.timings, "sources": sources,
-    }
+@app.post("/api/query/stream")
+async def query_stream(payload: dict):
+    """Stream live stage events (routing/retrieving/reranking/expanding/generating)
+    then the final answer, over SSE."""
+    import queue
+    import threading
+
+    q = (payload.get("query") or "").strip()
+    if not q:
+        raise HTTPException(400, "empty query")
+    provider = payload.get("provider") or "gemini"
+    model = payload.get("model") or "gemini-2.5-flash"
+    filters = _build_filters(payload.get("doc_ids"))
+
+    evq: "queue.Queue[dict]" = queue.Queue()
+    holder: dict = {}
+
+    def progress_cb(stage):
+        evq.put({"event": "stage", "stage": stage})
+
+    def run():
+        from rag_system.generation.generate_v2 import answer_query
+        try:
+            a = answer_query(q, provider=provider, model=model,
+                             filters=filters, progress_cb=progress_cb)
+            holder["result"] = _answer_to_dict(a)
+            evq.put({"event": "done"})
+        except Exception as e:  # noqa: BLE001
+            holder["error"] = str(e)
+            evq.put({"event": "error", "message": str(e)})
+
+    threading.Thread(target=run, daemon=True).start()
+
+    async def gen():
+        while True:
+            try:
+                ev = evq.get_nowait()
+            except queue.Empty:
+                await asyncio.sleep(0.15)
+                continue
+            if ev["event"] in ("done", "error"):
+                ev["result"] = holder.get("result")
+                yield {"data": json.dumps(ev)}
+                return
+            yield {"data": json.dumps(ev)}
+
+    return EventSourceResponse(gen())
 
 
 @app.get("/api/page-image/{parent_id}")

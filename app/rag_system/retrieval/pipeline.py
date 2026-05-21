@@ -46,6 +46,7 @@ class Source:
     slide_title: str | None
     text: str                      # parent (slide) text — small-to-big context
     rerank_score: float | None
+    filename: str | None = None    # original PDF filename (provenance)
     matched_chunk_ids: list = field(default_factory=list)
     sources: list = field(default_factory=list)
     conflict_group: str | None = None
@@ -144,8 +145,22 @@ def _expand_version_pairs(query: str, chunks: list[RetrievedChunk], *,
 # ---------------------------------------------------------------------------
 # Small-to-big — chunk -> parent slide
 # ---------------------------------------------------------------------------
-def _to_sources(chunks: list[RetrievedChunk]) -> list[Source]:
+def _filename_map(doc_ids: list[str]) -> dict[str, str]:
+    if not doc_ids:
+        return {}
+    uniq = list(dict.fromkeys(doc_ids))
+    with get_connection() as conn:
+        cur = conn.cursor()
+        ph = ",".join(["%s"] * len(uniq))
+        cur.execute(f"SELECT doc_id, original_filename FROM documents WHERE doc_id IN ({ph})", uniq)
+        m = {r[0]: r[1] for r in cur.fetchall()}
+        cur.close()
+    return m
+
+
+def _to_sources(chunks: list[RetrievedChunk], filenames: dict[str, str] | None = None) -> list[Source]:
     """Replace each chunk with its parent slide (deduped), preserving provenance."""
+    filenames = filenames or {}
     parent_ids = [c.parent_id for c in chunks if c.parent_id]
     parents: dict[str, tuple] = {}
     if parent_ids:
@@ -185,6 +200,7 @@ def _to_sources(chunks: list[RetrievedChunk]) -> list[Source]:
                 page_number=c.page_number, slide_title=c.slide_title, text=c.text,
                 rerank_score=c.rerank_score, matched_chunk_ids=[c.chunk_id], sources=c.sources,
             )
+        src.filename = filenames.get(src.doc_id)
         seen[pid] = src
         order.append(pid)
     return [seen[pid] for pid in order]
@@ -225,11 +241,20 @@ def retrieve(
     candidate_k: int = 40,
     rerank_pool: int = 30,
     llm=None,
+    progress_cb=None,
 ) -> RetrievalResult:
     filters = filters or RetrievalFilters()
     top_k = top_k or settings.retrieval_top_k
     timings: dict = {}
 
+    def _emit(stage):
+        if progress_cb:
+            try:
+                progress_cb(stage)
+            except Exception:
+                pass
+
+    _emit("routing")
     t = time.perf_counter()
     plan = router.route(query, llm=llm)
     timings["route_ms"] = int((time.perf_counter() - t) * 1000)
@@ -237,6 +262,7 @@ def retrieve(
     if plan.prefer_recent:
         filters.prefer_recent = True
 
+    _emit("retrieving")
     t = time.perf_counter()
     cands = multi_source_retrieve(
         plan.sub_queries, filters=filters, candidate_k=candidate_k,
@@ -246,13 +272,16 @@ def retrieve(
     timings["retrieve_ms"] = int((time.perf_counter() - t) * 1000)
     timings["n_candidates"] = len(cands)
 
+    _emit("reranking")
     t = time.perf_counter()
     reranked = reranker.rerank(query, chunks, top_k=max(top_k * 2, 12))
     timings["rerank_ms"] = int((time.perf_counter() - t) * 1000)
 
+    _emit("expanding")
     diversified = _diversify(reranked, top_k=top_k)
     expanded = _expand_version_pairs(query, diversified, plan=plan)
-    sources = _to_sources(expanded)
+    filenames = _filename_map([c.doc_id for c in expanded])
+    sources = _to_sources(expanded, filenames)
     conflicts = _detect_conflicts(sources)
 
     log.info("retrieve(%r): %d sources, %d conflicts, timings=%s",

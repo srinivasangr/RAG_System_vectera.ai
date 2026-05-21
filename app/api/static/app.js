@@ -23,6 +23,7 @@ let selectedFile = null;
 window.addEventListener("DOMContentLoaded", () => {
   loadProfile();
   loadDocuments();
+  loadDocFilter();
 
   // tabs
   document.querySelectorAll(".tab").forEach((b) =>
@@ -30,6 +31,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ask
   $("ask-form").addEventListener("submit", onAsk);
+  $("sel-all").addEventListener("click", () => setAllDocs(true));
+  $("sel-none").addEventListener("click", () => setAllDocs(false));
 
   // ingest
   $("file").addEventListener("change", (e) => {
@@ -54,6 +57,60 @@ function switchView(view) {
 }
 
 // ---------------------------------------------------------------------------
+// Document filter sidebar
+// ---------------------------------------------------------------------------
+async function loadDocFilter() {
+  const box = $("doc-filter");
+  try {
+    const docs = await (await fetch("/api/documents")).json();
+    if (!Array.isArray(docs) || !docs.length) { box.innerHTML = '<div class="dim">No documents.</div>'; return; }
+    box.innerHTML = docs.map((d) => `
+      <label class="docchk">
+        <input type="checkbox" class="docbox" value="${esc(d.doc_id)}" checked />
+        <span class="docchk-name">${esc(d.company || d.doc_id)}</span>
+        <span class="docchk-meta">${esc(d.doc_type || "")} · ${esc(d.as_of_date || "—")}</span>
+      </label>`).join("");
+  } catch { box.innerHTML = '<div class="dim">Failed to load.</div>'; }
+}
+function setAllDocs(on) { document.querySelectorAll(".docbox").forEach((c) => (c.checked = on)); }
+function selectedDocIds() {
+  const all = [...document.querySelectorAll(".docbox")];
+  const chk = all.filter((c) => c.checked).map((c) => c.value);
+  // empty selection OR all selected => no filter (search everything)
+  return (chk.length === 0 || chk.length === all.length) ? [] : chk;
+}
+
+const STAGE_LABEL = {
+  routing: "Understanding your question…",
+  retrieving: "Searching documents (dense + keyword + tables/charts)…",
+  reranking: "Ranking the best passages…",
+  expanding: "Gathering context + checking versions…",
+  generating: "Writing a grounded answer…",
+};
+
+// Parse an SSE POST stream frame-by-frame.
+async function streamPost(url, payload, onEvent) {
+  const resp = await fetch(url, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let idx;
+    while ((idx = buf.indexOf("\n\n")) >= 0) {
+      const frame = buf.slice(0, idx); buf = buf.slice(idx + 2);
+      const line = frame.split("\n").find((l) => l.startsWith("data:"));
+      if (line) { try { onEvent(JSON.parse(line.slice(5).trim())); } catch {} }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Ask
 // ---------------------------------------------------------------------------
 async function onAsk(e) {
@@ -66,18 +123,25 @@ async function onAsk(e) {
   $("answer-wrap").classList.add("hidden");
   const st = $("ask-status");
   st.classList.remove("hidden");
-  st.textContent = "Retrieving + reasoning… (router → multi-source → rerank → generate)";
+  st.innerHTML = '<span class="spin">⟳</span> Starting…';
 
-  let r;
+  let r = null;
   try {
-    r = await (await fetch("/api/query", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: q, provider, model }),
-    })).json();
+    await streamPost("/api/query/stream",
+      { query: q, provider, model, doc_ids: selectedDocIds() },
+      (ev) => {
+        if (ev.event === "stage") {
+          st.innerHTML = `<span class="spin">⟳</span> ${esc(STAGE_LABEL[ev.stage] || ev.stage)}`;
+        } else if (ev.event === "done") {
+          r = ev.result;
+        } else if (ev.event === "error") {
+          st.textContent = "Error: " + ev.message;
+        }
+      });
   } catch (err) {
     st.textContent = "Error: " + err; $("ask-btn").disabled = false; return;
   }
-  if (r.error || !r.answer) { st.textContent = "Error: " + (r.error || "no answer"); $("ask-btn").disabled = false; return; }
+  if (!r || !r.answer) { $("ask-btn").disabled = false; return; }
 
   st.classList.add("hidden");
   $("answer-wrap").classList.remove("hidden");
@@ -105,8 +169,9 @@ async function onAsk(e) {
         ${s.conflict_group ? '<span class="warn">⚠ version</span>' : ""}
       </div>
       <div class="src-title">${esc(s.slide_title || "")}</div>
+      <div class="src-file">📄 ${esc(s.filename || s.doc_id || "")}</div>
       <div class="src-snip">${esc(s.snippet || "")}</div>
-      <button class="src-img-btn" data-pid="${esc(s.parent_id)}" data-label="${esc((s.company||'')+' p.'+s.page_number)}">🔍 view source page</button>
+      <button class="src-img-btn" data-pid="${esc(s.parent_id)}" data-label="${esc((s.filename||s.company||'')+' — p.'+s.page_number)}">🔍 view source page</button>
     </div>`).join("");
   $("sources").querySelectorAll(".src-img-btn").forEach((b) =>
     b.addEventListener("click", () => showPage(b.dataset.pid, b.dataset.label)));
