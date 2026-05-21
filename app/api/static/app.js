@@ -100,7 +100,7 @@ async function streamPost(url, payload, onEvent) {
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
-    buf += dec.decode(value, { stream: true });
+    buf += dec.decode(value, { stream: true }).replace(/\r\n/g, "\n"); // normalize CRLF
     let idx;
     while ((idx = buf.indexOf("\n\n")) >= 0) {
       const frame = buf.slice(0, idx); buf = buf.slice(idx + 2);
@@ -139,9 +139,20 @@ async function onAsk(e) {
         }
       });
   } catch (err) {
-    st.textContent = "Error: " + err; $("ask-btn").disabled = false; return;
+    st.innerHTML = '<span class="spin">⟳</span> Working…';  // streaming hiccup → fall back below
   }
-  if (!r || !r.answer) { $("ask-btn").disabled = false; return; }
+  // Fallback: if streaming didn't yield a result, use the plain endpoint.
+  if (!r || !r.answer) {
+    try {
+      r = await (await fetch("/api/query", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: q, provider, model, doc_ids: selectedDocIds() }),
+      })).json();
+    } catch (err) {
+      st.textContent = "Error: " + err; $("ask-btn").disabled = false; return;
+    }
+  }
+  if (!r || !r.answer) { st.textContent = "Error: no answer"; $("ask-btn").disabled = false; return; }
 
   st.classList.add("hidden");
   $("answer-wrap").classList.remove("hidden");
