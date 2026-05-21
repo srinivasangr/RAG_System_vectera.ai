@@ -116,6 +116,58 @@ def insert_chart_records_v3(records, *, conn=None) -> int:
     return len(records)
 
 
+def log_query_v2(*, question, answer, intent, sub_queries, retrieved_ids,
+                 retrieval_stages, conflict_pairs, provider_chain, llm_provider,
+                 llm_model, total_latency_ms, doc_ids=None, conn=None) -> str:
+    """Append one row to query_log with the v2 trace columns. Best-effort —
+    callers wrap in try/except so logging never breaks a query."""
+    import json as _json
+    import uuid as _uuid
+    qid = _uuid.uuid4().hex
+    with _use_connection(conn) as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO query_log
+                 (query_id, question, filters, retrieved_ids, answer,
+                  llm_provider, llm_model, latency_ms, router_intent, sub_queries,
+                  retrieval_stages, conflict_pairs, provider_chain, total_latency_ms)
+               SELECT %s, %s, PARSE_JSON(%s), PARSE_JSON(%s)::ARRAY, %s,
+                      %s, %s, %s, %s, PARSE_JSON(%s),
+                      PARSE_JSON(%s), PARSE_JSON(%s), PARSE_JSON(%s), %s""",
+            (qid, question, _json.dumps({"doc_ids": list(doc_ids or [])}),
+             _json.dumps(list(retrieved_ids or [])), answer,
+             llm_provider, llm_model, total_latency_ms, intent,
+             _json.dumps(list(sub_queries or [])),
+             _json.dumps(retrieval_stages or {}),
+             _json.dumps(conflict_pairs or []),
+             _json.dumps(provider_chain or []),
+             total_latency_ms),
+        )
+        conn.commit()
+        cur.close()
+    return qid
+
+
+def recent_queries(limit: int = 50, *, conn=None) -> list[dict]:
+    """Recent query_log entries for the History tab."""
+    with _use_connection(conn) as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """SELECT query_id, question, answer, router_intent, llm_provider,
+                      llm_model, total_latency_ms, created_at
+               FROM query_log
+               ORDER BY created_at DESC NULLS LAST
+               LIMIT %s""", (limit,))
+        cols = ["query_id", "question", "answer", "intent", "llm_provider",
+                "llm_model", "total_latency_ms", "created_at"]
+        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        cur.close()
+    for r in rows:
+        if r.get("created_at") is not None:
+            r["created_at"] = str(r["created_at"])
+    return rows
+
+
 def get_page_image(parent_id: str, *, conn=None):
     """Return (mime_type, image_b64) for a page, or None."""
     with _use_connection(conn) as conn:

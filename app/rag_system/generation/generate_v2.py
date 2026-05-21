@@ -143,6 +143,7 @@ def answer_query(
     top_k: int | None = None,
     filters: RetrievalFilters | None = None,
     progress_cb=None,
+    write_log: bool = True,
 ) -> AnswerV2:
     """End-to-end: retrieve → conflict-aware generate → parse citations."""
     t0 = time.perf_counter()
@@ -196,4 +197,21 @@ def answer_query(
         timings=timings,
     )
     ans.timings["provider_chain"] = chain
+
+    # Best-effort query log (never break the answer on a logging error).
+    if write_log:
+        try:
+            from rag_system.storage import repository_v3 as repo3
+            stage_t = {k: v for k, v in timings.items() if k != "provider_chain"}
+            repo3.log_query_v2(
+                question=query, answer=ans.answer, intent=getattr(rr.plan, "intent", None),
+                sub_queries=getattr(rr.plan, "sub_queries", []),
+                retrieved_ids=[s.parent_id for s in rr.sources],
+                retrieval_stages=stage_t, conflict_pairs=rr.conflicts,
+                provider_chain=chain, llm_provider=ans.llm_provider,
+                llm_model=ans.llm_model, total_latency_ms=timings.get("total_ms"),
+                doc_ids=(filters.doc_ids if filters else []),
+            )
+        except Exception as e:  # noqa: BLE001
+            log.warning("query_log write failed: %s", e)
     return ans

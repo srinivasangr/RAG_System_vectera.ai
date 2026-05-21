@@ -269,6 +269,16 @@ async def query_stream(payload: dict):
     return EventSourceResponse(gen())
 
 
+@app.get("/api/history")
+async def history(limit: int = 50):
+    """Recent queries from query_log (for the History tab)."""
+    from rag_system.storage import repository_v3 as repo3
+    try:
+        return repo3.recent_queries(limit)
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 @app.get("/api/page-image/{parent_id}")
 async def page_image(parent_id: str):
     """Serve the stored page thumbnail for a citation."""

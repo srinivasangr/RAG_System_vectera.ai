@@ -44,6 +44,9 @@ window.addEventListener("DOMContentLoaded", () => {
   $("ingest-form").addEventListener("submit", onIngest);
   $("refresh-docs").addEventListener("click", () => { loadDocuments(); loadProfile(); });
 
+  // history
+  $("refresh-hist").addEventListener("click", loadHistory);
+
   // modal
   $("modal-close").addEventListener("click", () => $("modal").classList.add("hidden"));
   $("modal").addEventListener("click", (e) => { if (e.target.id === "modal") $("modal").classList.add("hidden"); });
@@ -52,8 +55,27 @@ window.addEventListener("DOMContentLoaded", () => {
 function switchView(view) {
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
   $("view-ask").classList.toggle("hidden", view !== "ask");
+  $("view-history").classList.toggle("hidden", view !== "history");
   $("view-ingest").classList.toggle("hidden", view !== "ingest");
   if (view === "ingest") { loadDocuments(); loadProfile(); }
+  if (view === "history") loadHistory();
+}
+
+async function loadHistory() {
+  const box = $("hist-list");
+  box.innerHTML = "loading…";
+  try {
+    const rows = await (await fetch("/api/history?limit=50")).json();
+    if (!Array.isArray(rows) || !rows.length) { box.innerHTML = '<div class="dim">No queries yet.</div>'; return; }
+    box.innerHTML = rows.map((r) => `
+      <details class="hist">
+        <summary>
+          <span class="hist-q">${esc(r.question || "")}</span>
+          <span class="hist-meta">${esc((r.created_at || "").slice(0, 19))} · ${esc(r.intent || "")} · ${esc(r.llm_model || r.llm_provider || "")}${r.total_latency_ms ? " · " + r.total_latency_ms + "ms" : ""}</span>
+        </summary>
+        <div class="hist-ans">${esc(r.answer || "").replace(/\n/g, "<br>")}</div>
+      </details>`).join("");
+  } catch { box.innerHTML = '<div class="dim">Failed to load history.</div>'; }
 }
 
 // ---------------------------------------------------------------------------

@@ -145,6 +145,14 @@ button.ghost:hover { color: var(--text); border-color: var(--accent); }
 .spin { display: inline-block; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .src-file { color: var(--muted); font-size: 11.5px; margin: 2px 0 5px; font-family: var(--mono); }
+
+/* ---- history ---- */
+.hist-list { display: flex; flex-direction: column; gap: 8px; }
+.hist { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 4px 12px; }
+.hist summary { cursor: pointer; padding: 8px 0; display: flex; flex-direction: column; gap: 3px; }
+.hist-q { font-weight: 600; font-size: 14px; }
+.hist-meta { color: var(--muted); font-size: 11.5px; }
+.hist-ans { padding: 10px 0 12px; line-height: 1.55; font-size: 13.5px; border-top: 1px solid var(--border); margin-top: 6px; }
 .q-input {
   flex: 1; background: var(--panel-2); color: var(--text);
   border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-size: 15px;

@@ -11,6 +11,7 @@
     <div class="brand"><span class="logo">◧</span><span>RAG System <em>· v2</em></span></div>
     <nav class="tabs">
       <button class="tab active" data-view="ask">Ask</button>
+      <button class="tab" data-view="history">History</button>
       <button class="tab" data-view="ingest">Ingest &amp; Corpus</button>
     </nav>
     <div id="corpus-summary" class="corpus-summary">loading…</div>
@@ -49,6 +50,16 @@
         <h3 class="sources-h">Sources</h3>
         <div id="sources" class="sources"></div>
       </div>
+    </section>
+  </main>
+
+  <!-- ===================== HISTORY ===================== -->
+  <main id="view-history" class="view hidden">
+    <section class="panel">
+      <div class="panel-head"><h2>Query history</h2>
+        <button id="refresh-hist" class="ghost">↻ Refresh</button></div>
+      <p class="hint">Every question is logged to Snowflake <code>query_log</code> with its intent, timings, and engine.</p>
+      <div id="hist-list" class="hist-list">loading…</div>
     </section>
   </main>
 
