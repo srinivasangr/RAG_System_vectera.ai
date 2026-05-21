@@ -196,6 +196,7 @@ def _answer_to_dict(a) -> dict:
         "cited_numbers": a.cited_numbers, "conflicts": a.conflicts,
         "engine": f"{a.llm_provider}/{a.llm_model}",
         "timings": timings, "sources": sources,
+        "trace": getattr(a, "trace", {}),
     }
 
 

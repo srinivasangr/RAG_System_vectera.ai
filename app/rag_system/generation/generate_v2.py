@@ -71,6 +71,7 @@ class AnswerV2:
     llm_model: str
     timings: dict = field(default_factory=dict)
     reasoning: str | None = None
+    trace: dict = field(default_factory=dict)
 
 
 # Generation provider fallback chain (architecture §7). On a transient failure
@@ -96,8 +97,10 @@ def _generate_with_fallback(messages, primary_llm, *, max_tokens):
         try:
             t = time.perf_counter()
             text = llm.generate(messages, temperature=0.0, max_tokens=max_tokens)
+            usage = getattr(llm, "last_usage", {}) or {}
             chain_log.append({"engine": label, "ok": True,
-                              "ms": int((time.perf_counter() - t) * 1000)})
+                              "ms": int((time.perf_counter() - t) * 1000),
+                              "tokens": usage})
             return text, getattr(llm, "name", label), getattr(llm, "_default_model", ""), chain_log
         except Exception as e:  # noqa: BLE001
             last_err = e
@@ -158,6 +161,7 @@ def answer_query(
 
     # 1) Retrieve (router uses the same llm)
     rr = retrieve(query, filters=filters, top_k=top_k, llm=llm, progress_cb=progress_cb)
+    router_usage = dict(getattr(llm, "last_usage", {}) or {})  # router call's tokens
 
     # 2) No sources → honest refusal
     if not rr.sources:
@@ -197,6 +201,41 @@ def answer_query(
         timings=timings,
     )
     ans.timings["provider_chain"] = chain
+
+    # ---- Build the observability trace (spans + tokens + texts) ----
+    gen_usage = {}
+    for entry in chain:
+        if entry.get("ok") and entry.get("tokens"):
+            gen_usage = entry["tokens"]
+            break
+
+    def _tot(u):
+        return (u or {}).get("total_tokens") or 0
+    total_tokens = _tot(router_usage) + _tot(gen_usage)
+
+    ans.trace = {
+        "plan": {
+            "intent": getattr(rr.plan, "intent", None),
+            "entities": getattr(rr.plan, "entities", []),
+            "attributes": getattr(rr.plan, "attributes", []),
+            "sub_queries": getattr(rr.plan, "sub_queries", []),
+            "needs_tables": getattr(rr.plan, "needs_tables", None),
+            "needs_charts": getattr(rr.plan, "needs_charts", None),
+            "prefer_recent": getattr(rr.plan, "prefer_recent", None),
+        },
+        "spans": [
+            {"name": "route (router LLM)", "ms": timings.get("route_ms"), "tokens": router_usage},
+            {"name": "retrieve (dense+lexical+structured → RRF)",
+             "ms": timings.get("retrieve_ms"), "n_candidates": timings.get("n_candidates")},
+            {"name": "rerank (cross-encoder)", "ms": timings.get("rerank_ms")},
+            {"name": "generate (answer LLM)", "ms": timings.get("generate_ms"), "tokens": gen_usage},
+        ],
+        "provider_chain": chain,
+        "tokens": {"router": router_usage, "generation": gen_usage, "total": total_tokens},
+        "prompt_preview": user[:6000],
+        "system_prompt_chars": len(SYSTEM_PROMPT),
+        "n_sources": len(rr.sources),
+    }
 
     # Best-effort query log (never break the answer on a logging error).
     if write_log:

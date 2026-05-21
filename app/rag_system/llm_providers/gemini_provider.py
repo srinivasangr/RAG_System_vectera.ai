@@ -85,6 +85,16 @@ class GeminiProvider(BaseLLMProvider):
             contents=contents,
             config=cfg,
         )
+        # Capture token usage for observability (best-effort).
+        try:
+            u = resp.usage_metadata
+            self.last_usage = {
+                "prompt_tokens": getattr(u, "prompt_token_count", None),
+                "completion_tokens": getattr(u, "candidates_token_count", None),
+                "total_tokens": getattr(u, "total_token_count", None),
+            }
+        except Exception:  # noqa: BLE001
+            self.last_usage = {}
         return (resp.text or "").strip()
 
 

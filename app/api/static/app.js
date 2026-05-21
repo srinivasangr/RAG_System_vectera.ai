@@ -186,6 +186,7 @@ async function onAsk(e) {
     `<span class="dim">retrieve ${t.retrieve_ms || "?"}ms · rerank ${t.rerank_ms || "?"}ms · gen ${t.generate_ms || "?"}ms · ${r.sources.length} sources</span>`;
 
   $("answer").innerHTML = renderAnswer(r.answer, new Set(r.cited_numbers || []));
+  renderTrace(r.trace || {});
 
   $("conflicts").innerHTML = (r.conflicts && r.conflicts.length)
     ? `⚠ Conflicting versions surfaced: ` + r.conflicts.map((c) =>
@@ -210,6 +211,34 @@ async function onAsk(e) {
     b.addEventListener("click", () => showPage(b.dataset.pid, b.dataset.label)));
 
   $("ask-btn").disabled = false;
+}
+
+function renderTrace(tr) {
+  const box = $("trace");
+  if (!tr || !tr.spans) { box.innerHTML = '<div class="dim">No trace.</div>'; return; }
+  const tok = (t) => (t && t.total_tokens) ? `${t.total_tokens} tok` : "";
+  const spans = tr.spans.map((s) => `
+    <div class="span">
+      <span class="span-name">${esc(s.name)}</span>
+      <span class="span-ms">${s.ms != null ? s.ms + "ms" : "—"}</span>
+      <span class="span-extra">${s.n_candidates != null ? s.n_candidates + " cand" : ""} ${esc(tok(s.tokens))}</span>
+    </div>`).join("");
+  const chain = (tr.provider_chain || []).map((c) =>
+    `${esc(c.engine)} ${c.ok ? "✓" : "✗"} ${c.ms || "?"}ms ${esc(tok(c.tokens))}`).join(" → ");
+  const t = tr.tokens || {};
+  box.innerHTML = `
+    <div class="trace-sec"><b>Query plan (router)</b>
+      <div class="dim">intent: ${esc(tr.plan?.intent||"")} · tables:${tr.plan?.needs_tables} · charts:${tr.plan?.needs_charts}</div>
+      <div>sub-queries: ${(tr.plan?.sub_queries||[]).map((q)=>`<span class="pill">${esc(q)}</span>`).join(" ")}</div>
+    </div>
+    <div class="trace-sec"><b>Spans</b>${spans}</div>
+    <div class="trace-sec"><b>LLM engine chain</b><div class="dim">${chain||"—"}</div></div>
+    <div class="trace-sec"><b>Tokens</b>
+      <div class="dim">router ${tok(t.router)||"0"} · generation ${tok(t.generation)||"0"} · <b>total ${t.total||0}</b></div>
+    </div>
+    <details class="trace-sec"><summary><b>Prompt sent to the model</b> (${tr.system_prompt_chars||0} sys chars + sources)</summary>
+      <pre class="trace-prompt">${esc(tr.prompt_preview||"")}</pre>
+    </details>`;
 }
 
 // highlight [N] / [N,M] citation markers
