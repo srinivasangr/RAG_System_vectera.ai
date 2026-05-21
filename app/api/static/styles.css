@@ -74,7 +74,8 @@ button.ghost {
 button.ghost:hover { color: var(--text); border-color: var(--accent); }
 
 .progress { margin-top: 18px; }
-.progress.hidden, .hidden { display: none; }
+/* must beat later, more-specific rules like .modal / .view.layout */
+.hidden { display: none !important; }
 .progress h3 { font-size: 14px; margin: 0 0 12px; }
 
 .stages { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
