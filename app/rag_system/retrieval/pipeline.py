@@ -242,6 +242,7 @@ def retrieve(
     rerank_pool: int = 30,
     llm=None,
     progress_cb=None,
+    plan=None,
 ) -> RetrievalResult:
     filters = filters or RetrievalFilters()
     top_k = top_k or settings.retrieval_top_k
@@ -254,9 +255,12 @@ def retrieve(
             except Exception:
                 pass
 
-    _emit("routing")
+    # Reuse a pre-computed plan (lets the caller short-circuit before retrieval)
+    # to avoid a second router LLM call.
     t = time.perf_counter()
-    plan = router.route(query, llm=llm)
+    if plan is None:
+        _emit("routing")
+        plan = router.route(query, llm=llm)
     timings["route_ms"] = int((time.perf_counter() - t) * 1000)
 
     if plan.prefer_recent:

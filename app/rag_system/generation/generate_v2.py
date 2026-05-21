@@ -8,6 +8,7 @@ attributes, doc types, dates) arrives only in the SOURCE block at runtime.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from datetime import date
@@ -16,12 +17,44 @@ from rag_system.config import settings
 from rag_system.generation.citations import parse_citation_ns
 from rag_system.llm_providers import get_llm
 from rag_system.llm_providers.base import Message
+from rag_system.retrieval import router as router_mod
 from rag_system.retrieval.filters import RetrievalFilters
 from rag_system.retrieval.pipeline import Source, retrieve
 
 log = logging.getLogger(__name__)
 
 REFUSAL = "I don't have enough information in the provided documents to answer that."
+
+# ---------------------------------------------------------------------------
+# Input guardrails — cheap gating so off-topic input doesn't run the whole
+# retrieval+generation loop.
+# ---------------------------------------------------------------------------
+_GREETING_RE = re.compile(
+    r"^\s*(hi+|hey+|hello+|yo|good\s*(morning|afternoon|evening|night)|"
+    r"thanks?|thank\s*you|thx|ty|ok|okay|cool|nice|great|bye|"
+    r"how\s*are\s*you|who\s*are\s*you|what\s*can\s*you\s*do)\b[\s.!,?]*$",
+    re.IGNORECASE,
+)
+_GREETING_MSG = (
+    "Hi! I'm a document Q&A assistant for the documents currently loaded in this "
+    "corpus. Ask me anything about them — e.g. financial metrics, guidance, "
+    "strategy, occupancy, or comparisons across the companies."
+)
+_OUT_OF_SCOPE_MSG = (
+    "I can only answer questions grounded in the loaded documents, and that "
+    "doesn't appear to be answerable from them. Try asking about the companies, "
+    "metrics, or topics covered in the corpus."
+)
+
+
+def _quick_guard(query: str) -> str | None:
+    """Return a canned reply for trivial/non-question input (no LLM call)."""
+    q = (query or "").strip()
+    if len(q) < 2:
+        return "Please type a question about the documents."
+    if _GREETING_RE.match(q):
+        return _GREETING_MSG
+    return None
 
 SYSTEM_PROMPT = f"""You are a careful research analyst. Answer the QUESTION using
 ONLY the numbered SOURCES provided. Apply these rules in order of precedence:
@@ -159,9 +192,37 @@ def answer_query(
             except Exception:
                 pass
 
-    # 1) Retrieve (router uses the same llm)
-    rr = retrieve(query, filters=filters, top_k=top_k, llm=llm, progress_cb=progress_cb)
+    def _short(answer_text, plan, intent):
+        """Build a short-circuit answer (no retrieval/generation)."""
+        return AnswerV2(
+            question=query, answer=answer_text,
+            plan=plan or router_mod.RoutePlan(intent=intent),
+            sources=[], cited_numbers=[], conflicts=[],
+            llm_provider=getattr(llm, "name", provider or "?"),
+            llm_model=model or settings.llm_model,
+            timings={"total_ms": int((time.perf_counter() - t0) * 1000)},
+            trace={"short_circuit": intent},
+        )
+
+    # GUARDRAIL 1 — trivial/greeting input: instant canned reply, 0 LLM calls.
+    canned = _quick_guard(query)
+    if canned is not None:
+        _emit("done")
+        return _short(canned, None, "chitchat")
+
+    # GUARDRAIL 2 — classify once; if not answerable from the corpus, decline
+    # WITHOUT running the heavy retrieve+rerank+generate loop.
+    _emit("routing")
+    _t_route = time.perf_counter()
+    plan = router_mod.route(query, llm=llm)
+    route_ms = int((time.perf_counter() - _t_route) * 1000)
     router_usage = dict(getattr(llm, "last_usage", {}) or {})  # router call's tokens
+    if plan.intent == "refuse":
+        return _short(_OUT_OF_SCOPE_MSG, plan, "refuse")
+
+    # 1) Retrieve (reuse the plan we just computed — no second router call)
+    rr = retrieve(query, filters=filters, top_k=top_k, llm=llm,
+                  plan=plan, progress_cb=progress_cb)
 
     # 2) No sources → honest refusal
     if not rr.sources:
@@ -191,6 +252,7 @@ def answer_query(
 
     cited = parse_citation_ns(text)
     timings = {**rr.timings, "generate_ms": gen_ms,
+               "route_ms": route_ms,  # actual router time (retrieve reused the plan)
                "total_ms": int((time.perf_counter() - t0) * 1000)}
     log.info("answer(%r): %d sources, cited=%s, engine=%s, %dms",
              query[:50], len(rr.sources), cited, gen_provider, timings["total_ms"])
