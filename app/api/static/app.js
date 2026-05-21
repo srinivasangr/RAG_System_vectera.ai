@@ -188,10 +188,9 @@ async function onAsk(e) {
   $("answer").innerHTML = renderAnswer(r.answer, new Set(r.cited_numbers || []));
   renderTrace(r.trace || {});
 
-  $("conflicts").innerHTML = (r.conflicts && r.conflicts.length)
-    ? `⚠ Conflicting versions surfaced: ` + r.conflicts.map((c) =>
-        `<b>${esc(c.company)}</b> (${c.as_of_dates.join(", ")})`).join(" · ")
-    : "";
+  // Conflict detection still runs server-side (it shapes the answer's
+  // attribution), but we don't surface a version caution banner in the UI.
+  $("conflicts").innerHTML = "";
 
   $("sources").innerHTML = r.sources.map((s) => `
     <div class="src ${s.cited ? "cited" : ""}">
@@ -200,7 +199,6 @@ async function onAsk(e) {
         <b>${esc(s.company || "?")}</b>
         <span class="pill">${esc(s.doc_type || "")}</span>
         <span class="dim">p.${s.page_number} · as of ${esc(s.as_of_date || "—")}</span>
-        ${s.conflict_group ? '<span class="warn">⚠ version</span>' : ""}
       </div>
       <div class="src-title">${esc(s.slide_title || "")}</div>
       <div class="src-file">📄 ${esc(s.filename || s.doc_id || "")}</div>
