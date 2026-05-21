@@ -65,6 +65,7 @@ class GeminiProvider(BaseLLMProvider):
         model: str | None = None,
         temperature: float = 0.0,
         max_tokens: int = 1024,
+        thinking_budget: int | None = None,
     ) -> str:
         # Gemini takes system_instruction separately from contents
         system_parts = [m.content for m in messages if m.role == "system"]
@@ -75,11 +76,19 @@ class GeminiProvider(BaseLLMProvider):
             elif m.role == "assistant":
                 contents.append({"role": "model", "parts": [{"text": m.content}]})
 
-        cfg = types.GenerateContentConfig(
+        cfg_kwargs = dict(
             temperature=temperature,
             max_output_tokens=max_tokens,
             system_instruction="\n\n".join(system_parts) if system_parts else None,
         )
+        # For structured-JSON tasks (judge/router), disable 'thinking' so it
+        # doesn't consume the output budget and truncate the JSON.
+        if thinking_budget is not None:
+            try:
+                cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=thinking_budget)
+            except Exception:  # noqa: BLE001 — older SDKs may lack it
+                pass
+        cfg = types.GenerateContentConfig(**cfg_kwargs)
         resp = self._client.models.generate_content(
             model=model or self._default_model,
             contents=contents,
