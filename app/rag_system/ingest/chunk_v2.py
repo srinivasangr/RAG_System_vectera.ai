@@ -77,6 +77,9 @@ class ChunkV2:
     as_of_date: date | None = None
     doc_family_id: str | None = None
     version_label: str | None = None
+    # vision-derived chunks (table/chart/figure) carry these:
+    confidence: float | None = None
+    kind_detail: str | None = None
     # chart_description chunks carry their source image
     image_png_bytes: bytes | None = None
     image_width: int | None = None

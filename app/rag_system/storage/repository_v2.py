@@ -126,7 +126,8 @@ def delete_doc_artifacts_v2(doc_id: str, *, conn=None) -> dict:
     with _use_connection(conn) as conn:
         cur = conn.cursor()
         for tbl in ("propositions", "table_rows", "chart_records",
-                    "chunk_images", "chunks", "parent_images", "parent_chunks"):
+                    "chunk_images", "chunks", "parent_images", "page_images",
+                    "document_files", "parent_chunks"):
             if tbl == "parent_images":
                 cur.execute(
                     "DELETE FROM parent_images WHERE parent_id IN "
@@ -185,14 +186,15 @@ def insert_children_v2(children, embeddings: list[list[float]], *, conn=None) ->
                      (chunk_id, doc_id, parent_id, page_number, chunk_index, text,
                       token_count, chunk_type, embedding, company, doc_date,
                       version_label, footnote_text, qualifier_text, doc_type,
-                      as_of_date, doc_family_id, slide_title)
+                      as_of_date, doc_family_id, slide_title, confidence, kind_detail)
                    SELECT %s,%s,%s,%s,%s,%s,%s,%s,
                           {_vec(vec)}::VECTOR(FLOAT,{dim}),
-                          %s,%s,%s,%s,%s,%s,%s,%s,%s""",
+                          %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s""",
                 (ch.chunk_id, ch.doc_id, ch.parent_id, ch.page_number, ch.chunk_index,
                  ch.text, ch.token_count, ch.chunk_type, ch.company, ch.doc_date,
                  ch.version_label, ch.footnote_text, ch.qualifier_text, ch.doc_type,
-                 ch.as_of_date, ch.doc_family_id, ch.slide_title),
+                 ch.as_of_date, ch.doc_family_id, ch.slide_title,
+                 getattr(ch, "confidence", None), getattr(ch, "kind_detail", None)),
             )
         conn.commit()
         cur.close()

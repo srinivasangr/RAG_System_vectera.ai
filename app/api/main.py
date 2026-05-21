@@ -31,7 +31,7 @@ from rag_system.config import settings
 log = logging.getLogger(__name__)
 
 _HERE = Path(__file__).parent
-_INDEX_HTML = (_HERE / "templates" / "index.html").read_text(encoding="utf-8")
+_INDEX_FILE = _HERE / "templates" / "index.html"
 
 app = FastAPI(title="RAG System API", version="2.0")
 app.mount("/static", StaticFiles(directory=str(_HERE / "static")), name="static")
@@ -42,8 +42,8 @@ app.mount("/static", StaticFiles(directory=str(_HERE / "static")), name="static"
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    # The page is static HTML (no server-side variables); serve it directly.
-    return HTMLResponse(_INDEX_HTML)
+    # Read fresh each request (cheap) so UI edits show without a server restart.
+    return HTMLResponse(_INDEX_FILE.read_text(encoding="utf-8"))
 
 
 # ---------------------------------------------------------------------------

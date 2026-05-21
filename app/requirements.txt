@@ -17,6 +17,7 @@ snowflake-connector-python>=3.13.0
 
 # --- PDF parsing ---
 docling>=2.0.0           # primary parser: layout-aware text + tables → Markdown
+pymupdf>=1.24.0          # render PDF pages → images for page-level vision (v3)
 pypdf>=5.1.0             # checksum + page-count helpers
 pillow>=10.0.0           # image handling for vision pass
 

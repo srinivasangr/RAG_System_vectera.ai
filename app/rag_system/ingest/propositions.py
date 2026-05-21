@@ -23,19 +23,20 @@ from rag_system.llm_providers.base import Message
 
 log = logging.getLogger(__name__)
 
-_SYSTEM = """You decompose a passage into atomic factual statements for retrieval.
+_SYSTEM = """You extract the KEY factual claims from a passage, for retrieval.
 
 Return STRICT JSON only: {"propositions": ["...", "..."]}
 
-Each statement must:
-- carry exactly ONE fact
-- be self-contained: spell out the entity/subject (no "it"/"they"/"the company")
-- preserve original numbers, units, dates, and any scope qualifier
-  (e.g. "including assets under construction", "as of Dec 31, 2025")
-- copy facts faithfully — do not infer, compute, or add anything not stated
-
-If the passage has no factual content (e.g. a heading or a photo caption),
-return {"propositions": []}.
+Rules:
+- Extract only SUBSTANTIVE facts a user might ask about (numbers, metrics,
+  dates, named events, guidance, comparisons). Skip filler, headings,
+  navigation text, and generic boilerplate.
+- At most 6 statements. Fewer is better — do not pad.
+- Each statement: exactly ONE fact, self-contained (spell out the entity, no
+  "it"/"they"/"the company"), preserving numbers, units, dates, and scope
+  qualifiers (e.g. "including assets under construction", "as of Dec 31, 2025").
+- Copy faithfully — never infer, compute, or invent.
+- If the passage has no substantive facts, return {"propositions": []}.
 """
 
 

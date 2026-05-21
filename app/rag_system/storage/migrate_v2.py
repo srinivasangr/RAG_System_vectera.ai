@@ -94,12 +94,16 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--verify", action="store_true",
                    help="skip migration, just print resulting tables/columns")
+    p.add_argument("--file", type=str, default="schema_v2.sql",
+                   help="SQL file in this dir to apply (e.g. schema_v3.sql)")
     args = p.parse_args(argv)
+
+    schema_file = SCHEMA_V2_FILE.parent / args.file
 
     with get_connection() as conn:
         cur = conn.cursor()
         if not args.verify:
-            sql = SCHEMA_V2_FILE.read_text(encoding="utf-8")
+            sql = schema_file.read_text(encoding="utf-8")
             stmts = _split_statements(sql)
             print(f"Applying {len(stmts)} v2 migration statements...\n")
             for stmt in stmts:

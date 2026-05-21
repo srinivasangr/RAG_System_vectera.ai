@@ -137,6 +137,35 @@ def _version_label(d: date | None) -> str | None:
     return d.strftime("%b %Y") if d else None
 
 
+def extract_file_meta(pdf_path: Path) -> dict:
+    """File-system + embedded-PDF metadata (no LLM). Domain-neutral."""
+    meta = {
+        "original_filename": pdf_path.name,
+        "file_size_bytes": None,
+        "mime_type": "application/pdf",
+        "pdf_author": None,
+        "pdf_title": None,
+        "pdf_created": None,
+        "pdf_page_count": None,
+    }
+    try:
+        meta["file_size_bytes"] = pdf_path.stat().st_size
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        from pypdf import PdfReader
+        r = PdfReader(str(pdf_path))
+        meta["pdf_page_count"] = len(r.pages)
+        info = r.metadata or {}
+        meta["pdf_author"] = str(info.get("/Author")) if info.get("/Author") else None
+        meta["pdf_title"] = str(info.get("/Title")) if info.get("/Title") else None
+        created = info.get("/CreationDate")
+        meta["pdf_created"] = str(created) if created else None
+    except Exception:  # noqa: BLE001
+        pass
+    return meta
+
+
 # ---------------------------------------------------------------------------
 # LLM identification
 # ---------------------------------------------------------------------------

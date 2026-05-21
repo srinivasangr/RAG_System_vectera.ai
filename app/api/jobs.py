@@ -71,7 +71,8 @@ class JobRegistry:
 
     def _worker(self, job: Job, pdf_path: Path, options: dict[str, Any]) -> None:
         # Import here so the API can boot even if heavy deps are slow to load.
-        from rag_system.ingest.pipeline_v2 import ingest_one_v2
+        from rag_system.ingest.pipeline_v3 import ingest_one_v3
+        from rag_system.ingest.vision_page import DEFAULT_VISION_MODEL
         from rag_system.llm_providers import get_llm
 
         job.status = "running"
@@ -86,12 +87,12 @@ class JobRegistry:
             if prov or model:
                 ingest_llm = get_llm(prov, model)
 
-            result = ingest_one_v2(
+            result = ingest_one_v3(
                 pdf_path,
                 with_vision=options.get("with_vision", True),
                 with_propositions=options.get("with_propositions", True),
-                vision_budget=options.get("vision_budget"),
-                force=options.get("force", True),
+                vision_model=options.get("vision_model") or DEFAULT_VISION_MODEL,
+                force=options.get("force", False),   # update-if-changed dedup
                 progress_cb=progress_cb,
                 llm=ingest_llm,
             )
