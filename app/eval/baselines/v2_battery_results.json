@@ -1,0 +1,2540 @@
+{
+  "system": "v2",
+  "gen_model": "gemini-3.1-flash-lite",
+  "judge_model": "gemini-2.5-flash",
+  "started_utc": "2026-05-22T04:27:13.077563Z",
+  "n": 24,
+  "counts": {
+    "Partial": 9,
+    "Fail": 8,
+    "Pass": 7
+  },
+  "ragas_avg": {
+    "faithfulness": 0.952,
+    "answer_relevance": 0.95,
+    "context_precision": 0.486,
+    "context_recall": 0.567
+  },
+  "results": [
+    {
+      "id": "Q1",
+      "group": "A",
+      "group_name": "Version & temporal awareness",
+      "question": "What is Digital Realty's total IT capacity?",
+      "diagnoses": "Version-pair retrieval under semantic near-duplication. The Dec 2025 and Mar 2026 decks have identical slide titles (\"Offering a Global Data Center Platform\") with materially different numbers (2.9 GW in-place / 730 MW under construction vs 3 GW in-place / 5 GW future = ~8 GW total) and different definitions of \"total capacity.\" Tests: (a) ingestion preserves document-level as_of_date, (b) retrieval surfaces both versions despite near-identical vectors, (c) reranker does not collapse them as duplicates, (d) generation preserves attribution rather than blending or arbitrarily picking one.",
+      "answer": "Digital Realty's total IT capacity is reported as follows:\n\n*   **~8 GW** per presentation as of December 31, 2025 [1].\n\nThe provided documents for the period ending September 30, 2025, do not disclose a total IT capacity figure [2, 3, 5].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1,
+        2,
+        3,
+        5
+      ],
+      "conflicts": [
+        {
+          "company": "Digital Realty",
+          "as_of_dates": [
+            "2025-09-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 5,
+      "sources": [
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 5,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## Offering a Global Data Center Platform\n\nCapacity in World's Major Metros to Meet Growing Customer Demand\n\n## Global Capacity\n\n~3 GW\n\nIn-Place IT Capacity\n\n52%\n\n29%\n\n10%\n\n5%\n\n5%\n\nNorth America\n\nEurope\n\nAPAC\n\nLatin America\n\nGeographically ",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 24,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## Multi-Year Backlog Enhances Visibility\n\n- Backlog Represents >20% of In-place Annualized Rent\n\n- 85% of Backlog Expected to Commence through 2026\n\n*2) Historical backlog adjusted for asset sales and purchases, joint venture and fund cont",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 13,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## AI Platform Readiness\n\n## As power-dense workloads grow, Digital Realty's modular designs can accommodate advanced cooling solutions\n\n## Average Rack Density Increase and % of Racks above 30 kW (1)\n\n'We estimate that AI workloads will\n\nr",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 7,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## Digital Realty's Competitive Advantage\n\nScale, Connectivity, and Execution\n\n## Global Platform\n\nEmbedded internal expertise as the world's largest data center owner, operator, acquiror and developer\n\n## Supply Chain Management\n\nDedicated",
+          "cited": false
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 19,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## Executing on Key Strategic Priorities\n\nPositioned for Long-Term Sustainable Growth\n\n## Coverage\n\nDeploy Where You Need\n\n## Connectivity\n\nConnect How You Need to Whom You Need\n\n5,000+\n\nCustomers\n\n50+\n\nMetros\n\n231,000+ Cross Connects\n\n300+",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 4753,
+        "retrieve_ms": 6453,
+        "n_candidates": 97,
+        "rerank_ms": 5761,
+        "generate_ms": 1056,
+        "total_ms": 22756
+      },
+      "judge": {
+        "result": "Partial",
+        "score": 3,
+        "critical_facts_found": [
+          "~8 GW total capacity as of Dec 31, 2025 (from March 2026 presentation)"
+        ],
+        "critical_facts_missing": [
+          "2.9 GW in-place and 730 MW under construction as of Sep 30, 2025 (from Dec 2025 presentation)"
+        ],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "good",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The answer correctly identifies one capacity figure and its source, but misses the other, different capacity figure from the other relevant document."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 0.7,
+        "context_precision": 0.2,
+        "context_recall": 0.8
+      }
+    },
+    {
+      "id": "Q2",
+      "group": "A",
+      "group_name": "Version & temporal awareness",
+      "question": "What is BXP's projected 2026 occupancy?",
+      "diagnoses": "Document-type recency hierarchy. Investor Day (Jun 30, 2025) gave a range of 87.25-88%; Q4 deck (Mar 2026) tightened to a point estimate of 88%. Tests whether the system recognizes that a Q4 quarterly update supersedes a mid-year Investor Day for forward guidance, and either presents both with chronology or prefers the more recent disclosure.",
+      "answer": "BXP's projected 2026 occupancy is as follows:\n\n*   **End of 2026:** Projected to be approximately 89% per BXP presentation as of June 30, 2025 [1].\n*   **Average for 2026:** Projected to be 87.25% to 88% per BXP presentations as of June 30, 2025 [1, 3].\n\nThe provided documents as of December 31, 2025, do not disclose specific 2026 occupancy projections, though they note that BXP's 2026 guidance reflects management's assumptions regarding occupancy levels [4].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1,
+        3,
+        4
+      ],
+      "conflicts": [
+        {
+          "company": "BXP",
+          "as_of_dates": [
+            "2025-06-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 6,
+      "sources": [
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 131,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## IN CONCLUSION:  2026 FFO CONSIDERATIONS\n\n2026 Occupancy:  End 2026 at ~89% | Average for year 87.25% - 88%\n\nDevelopment NOI growth primarily from 290 Binney Street and 1050 Winter Street\n\nDividend reset projected to add $0.04 per share\n\n",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 77,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## PRO FORMA SAME STORE LEASED PERCENTAGE 1\n\nLeased Percentage Today 89.1%\n\n+ 3.7%\n\nLeased Percentage 2027 2 92.8%\n\nAssuming the Historical Spread of 210bps Between Leased and Occupied Percentages, BXP's 2027 Occupancy Percentage Would Be A",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 126,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## PRO FORMA IN-SERVICE 1  OCCUPANCY\n\n2026 Pro Forma Occupancy Expected to Average 87.25% to 88%\n\n86.4%\n\n89.0%\n\n86.0%\n\n86.5%\n\n87.0%\n\n87.5%\n\n88.0%\n\n88.5%\n\n89.0%\n\n89.5%\n\n90.0%\n\nQ2 2025\n\nQ3 2025\n\nQ4 2025\n\nQ1 2026\n\nQ2 2026\n\nQ3 2026\n\nQ4 2026\n\nOc",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 46,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "RECONCILIATIONS OF NON-GAAP FINANCIAL MEASURES AND OTHER FINANCIAL INFORMATION (UNAUDITED)\n\n## Projected EPS and FFO\n\nBXP's guidance for first quarter and full year 2026 for diluted earnings per common share attributable to BXP, Inc. (EPS) ",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 26,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## $3.6 BILLION ACTIVE DEVELOPMENT PIPELINE 1\n\n*1. Represents BXP's Share of Estimated Total Investment, including income (loss) and interest carry on debt and equity investmen t during development. Excludes 651 Gateway (50% ownership), whi",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 7,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## STRONG LEASING MOMENTUM POSITIONS BXP FOR OCCUPANCY GROWTH\n\nSigned 1.8M 1  SF of leases in Q4 2025, representing a ~19% increase from Q3 2025\n\n- -Weighted-average lease term of 11.3 years for leases signed in Q4 2025 1,2\n\n- -Represents ~",
+          "cited": false
+        }
+      ],
+      "timings": {
+        "route_ms": 5662,
+        "retrieve_ms": 5964,
+        "n_candidates": 102,
+        "rerank_ms": 1893,
+        "generate_ms": 1243,
+        "total_ms": 17473
+      },
+      "judge": {
+        "result": "Fail",
+        "score": 1,
+        "critical_facts_found": [],
+        "critical_facts_missing": [
+          "2026 occupancy projection of 88% from the Q4 2025 Investor Presentation (dated 2025-12-31)"
+        ],
+        "incorrect_or_unsupported_claims": [
+          "The provided documents as of December 31, 2025, do not disclose specific 2026 occupancy projections"
+        ],
+        "citation_quality": "weak",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The answer fails to identify the most recent and accurate 2026 occupancy projection from the Q4 2025 Investor Presentation, incorrectly stating that the document does not disclose specific 2026 projections."
+      },
+      "ragas": {
+        "faithfulness": 0.8333333333333334,
+        "answer_relevance": 1.0,
+        "context_precision": 0.3333333333333333,
+        "context_recall": 0.25
+      }
+    },
+    {
+      "id": "Q3",
+      "group": "A",
+      "group_name": "Version & temporal awareness",
+      "question": "What's changed in BXP's strategy between the 2025 Investor Day and the Q4 2025 update?",
+      "diagnoses": "Same-company, two-document temporal-delta reasoning. Strategic framework is unchanged but execution has advanced: dividend reset announced in Investor Day, reported as completed in Q4; occupancy guidance tightened; 2026 FFO guidance ($6.96 midpoint) became public; CBD share rose 90.5% to 90.8% of NOI. Tests cross-document synthesis from the same issuer, ordered chronologically, with the ability to distinguish \"stable framework\" from \"evolved disclosure.\"",
+      "answer": "I don't have enough information in the provided documents to answer that.\n\nThe provided sources contain a summary of the funding strategy and leasing data from the 2025 Investor Day (as of June 30, 2025) [1, 2, 4] and a cover page for the Q4 2025 Investor Overview (as of December 31, 2025) [3]. The documents do not provide a comparative analysis or specific strategic updates regarding the period between the Investor Day and the Q4 2025 update.",
+      "intent": "delta",
+      "cited_numbers": [
+        1,
+        2,
+        4,
+        3
+      ],
+      "conflicts": [
+        {
+          "company": "BXP",
+          "as_of_dates": [
+            "2025-06-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 4,
+      "sources": [
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 105,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## FUNDING STRATEGY - SUMMARY\n\n*1. Represents BXP's Share.  See slide 10 for more details.*\n\n*2. Represents anticipated cash to be retained through 2027 as a result of the dividend reset.  See slide 12 for more details.*\n\n*3. Amount include",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 71,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## LEASING ON VACANT SPACE IN THE LAST SIX QUARTERS\n\n1. Includes 100% of consolidated and unconsolidated properties. 2. Q3 2025 includes deals signed through August 25, 2025.\n\nBXP 2025 Investor Day\n\n71\n\n| Quarter   |   Square Feet |\n|------",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 1,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## BXP QUARTERLY INVESTOR OVERVIEW Q4 2025",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 124,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## BXP FUNDING STRATEGY\n\nFully Fund Development Plan\n\nImproves Leverage\n\nAccretive to Earnings\n\nCreates Capacity for Future Investment Opportunities\n\nPositioned for Future Dividend Growth\n\nBXP 2025 Investor Day\n\n124",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 2815,
+        "retrieve_ms": 5495,
+        "n_candidates": 117,
+        "rerank_ms": 2066,
+        "generate_ms": 1287,
+        "total_ms": 15983
+      },
+      "judge": {
+        "result": "Fail",
+        "score": 0,
+        "critical_facts_found": [],
+        "critical_facts_missing": [
+          "dividend reset announced in Investor Day, reported as completed in Q4",
+          "occupancy guidance tightened",
+          "2026 FFO guidance ($6.96 midpoint) became public",
+          "CBD share rose 90.5% to 90.8% of NOI"
+        ],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "weak",
+        "likely_failure_stage": "retrieval",
+        "one_line_note": "The model incorrectly states it doesn't have enough information, despite the sources containing relevant data for comparison between the two periods."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.75,
+        "context_recall": 0.1111111111111111
+      }
+    },
+    {
+      "id": "Q4",
+      "group": "A",
+      "group_name": "Version & temporal awareness",
+      "question": "What is the economic impact of Simon's shopping centers on local communities?",
+      "diagnoses": "Absolute-date staleness awareness. The Simon report is dated November 2018 with 2017 data — ~7 years older than the rest of the corpus. The publication date is on page 2, not in the filename. Tests: (a) parser extracts publication date from document content (not just filename), (b) generation flags the absolute age of the source rather than presenting 2017 numbers as current fact.",
+      "answer": "As of 2018, Simon Property Group reports that its shopping centers impact local communities through the following economic and social channels:\n\n**Tax Contributions and Revenue**\n*   In 2017, Simon and its tenants generated nearly $5 billion for local economies and communities through property and sales taxes [1, 3].\n*   This total consisted of $695,965,850 in property taxes paid by Simon and $4,230,641,704 in state sales taxes generated by tenants [1].\n\n**Employment and Wages**\n*   Simon’s centers supported 316,870 total jobs in 2017 [3].\n*   This included 5,000 jobs directly at Simon, representing $372 million in wages, and 311,870 retail jobs across its centers, representing over $5.9 billion in annual wages [3].\n\n**Investment and Revitalization**\n*   Simon invested nearly $1 billion in property redevelopment in 2017 [1].\n*   Over the five-year period ending in 2017, the company invested over $5 billion in property redevelopment, which created jobs and strengthened local communities [1, 3].\n*   These investments are intended to drive consumer traffic to local and national retailers, increase average community wages, and enhance the beauty and perception of surrounding areas [1].\n\n**Community Engagement and Social Impact**\n*   100% of Simon’s shopping malls participate in local community activities, with each property engaging with an average of four community organizations [3].\n*   In 2017, 353 public fundraising events held at Simon properties raised $6,213,025 for charity [3].\n*   Simon pledged $1 million in both 2017 and 2018 to the Susan G. Komen foundation [3].\n*   Malls provide community-oriented spaces for socialization, play, exercise, fundraising, and education, including dedicated play spaces used by over 30 million visitors [2, 3].\n*   Properties act as \"one-stop\" locations that can help consumers save time and reduce commutes [2].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1,
+        3,
+        2
+      ],
+      "conflicts": [],
+      "n_sources": 3,
+      "sources": [
+        {
+          "company": "Simon Property Group",
+          "doc_type": "report",
+          "page_number": 9,
+          "as_of_date": "2018-11-01",
+          "filename": "Simon The Impact of Brick and Mortar Shopping.pdf",
+          "snippet": "MEASURING SIMON'S ECONOMIC, SOCIAL, AND ENVIRONMENTAL IMPACT\n\n## Local Economic Development\n\nRetail is one of the nation's largest non-farm employment sectors and retail development, and ongoing operations are an integral component of any l",
+          "cited": true
+        },
+        {
+          "company": "Simon Property Group",
+          "doc_type": "report",
+          "page_number": 20,
+          "as_of_date": "2018-11-01",
+          "filename": "Simon The Impact of Brick and Mortar Shopping.pdf",
+          "snippet": "## CONCLUSION AND NEXT STEPS\n\n## What's Next?\n\nBy analyzing the broader, socioeconomic perspective, Simon has demonstrated that shopping centers have many positive impacts in their communities. Moreover, this report highlights how our shopp",
+          "cited": true
+        },
+        {
+          "company": "Simon Property Group",
+          "doc_type": "report",
+          "page_number": 5,
+          "as_of_date": "2018-11-01",
+          "filename": "Simon The Impact of Brick and Mortar Shopping.pdf",
+          "snippet": "## FINDINGS -ENVIRONMENTAL AND SOCIOECONOMIC IMPACTS OF BRICK AND MORTAR SHOPPING\n\n## What We Found\n\nWhat is the true impact of brick and mortar shopping? The findings in this report highlight the scale of the impact that Simon's retail des",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 9600,
+        "retrieve_ms": 5387,
+        "n_candidates": 76,
+        "rerank_ms": 1956,
+        "generate_ms": 14485,
+        "total_ms": 35638
+      },
+      "judge": {
+        "result": "Partial",
+        "score": 3,
+        "critical_facts_found": [
+          "In 2017, Simon and its tenants generated nearly $5 billion for local economies and communities through property and sales taxes.",
+          "This total consisted of $695,965,850 in property taxes paid by Simon and $4,230,641,704 in state sales taxes generated by tenants.",
+          "Simon’s centers supported 316,870 total jobs in 2017.",
+          "This included 5,000 jobs directly at Simon, representing $372 million in wages, and 311,870 retail jobs across its centers, representing over $5.9 billion in annual wages.",
+          "Simon invested nearly $1 billion in property redevelopment in 2017.",
+          "Over the five-year period ending in 2017, the company invested over $5 billion in property redevelopment.",
+          "100% of Simon’s shopping malls participate in local community activities, with each property engaging with an average of four community organizations.",
+          "In 2017, 353 public fundraising events held at Simon properties raised $6,213,025 for charity.",
+          "Simon pledged $1 million in both 2017 and 2018 to the Susan G. Komen foundation.",
+          "Malls provide community-oriented spaces for socialization, play, exercise, fundraising, and education, including dedicated play spaces used by over 30 million visitors.",
+          "Properties act as \"one-stop\" locations that can help consumers save time and reduce commutes."
+        ],
+        "critical_facts_missing": [],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "good",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The answer correctly identifies the publication date of the report (2018) and the data year (2017) but does not explicitly flag the absolute age of the source as a limitation for current economic impact."
+      },
+      "ragas": {
+        "faithfulness": 0.9,
+        "answer_relevance": 1.0,
+        "context_precision": 1.0,
+        "context_recall": 0.14285714285714285
+      }
+    },
+    {
+      "id": "Q5",
+      "group": "B",
+      "group_name": "Intra-document inconsistency & footnote awareness",
+      "question": "How many customers does Digital Realty have?",
+      "diagnoses": "Within-document inconsistency + footnote-attached-as-of-date. In the Mar 2026 deck alone, page 3 says \"5,500+ Customers\" and page 23 says \"5,000+ Global Customers\" — both with footnotes citing Dec 31, 2025. The Dec 2025 deck says 5,000+. Tests: (a) chunker preserves the footnote's as-of date alongside the body number, (b) retrieval surfaces all three pages, (c) generation acknowledges the page-3-vs-page-23 inconsistency rather than picking one silently.",
+      "answer": "Digital Realty reports having 5,000+ global customers as of the following dates:\n\n*   **5,000+ Global Customers** per presentation as of December 31, 2025 [1].\n*   **5,000+ Customers** per presentation as of September 30, 2025 [2, 4].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1,
+        2,
+        4
+      ],
+      "conflicts": [
+        {
+          "company": "Digital Realty",
+          "as_of_dates": [
+            "2025-09-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 6,
+      "sources": [
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 23,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## High-Quality, Diversified Customer Base\n\n- Top customers have a presence in 36 different locations, on average\n\nCustomer Type (% by ARR) (1)\n\nCloud\n\n41%\n\nFinancial\n\n12%\n\nNetwork\n\n15%\n\nIT\n\nEnterprise\n\n9%\n\nContent\n\n14%\n\n10%\n\nInvestment\n\nGr",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 25,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## High-Quality, Diversified Customer Base\n\n- Top customers have a presence in 41 different locations, on average\n\nCustomer Type (% by ARR) (1)\n\nCloud\n\n41%\n\nFinancial\n\n12%\n\nNetwork\n\n15%\n\nIT\n\nEnterprise\n\n9%\n\nContent\n\n14%\n\n10%\n\n## High-Qualit",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 7,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## Digital Realty's Competitive Advantage & Execution Strategy\n\n## Customer Relationships\n\nLong-standing, deep and trusted partner of many of the largest hyperscale customers , helping meet their exponentially growing needs\n\n## Proprietary ",
+          "cited": false
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 19,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## Executing on Key Strategic Priorities\n\nPositioned for Long-Term Sustainable Growth\n\n## Coverage\n\nDeploy Where You Need\n\n## Connectivity\n\nConnect How You Need to Whom You Need\n\n5,000+\n\nCustomers\n\n50+\n\nMetros\n\n231,000+ Cross Connects\n\n300+",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 14,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## Global Connectivity\n\nNetwork Density that Promotes Innovation and Collaboration\n\n## The ServiceFabric ®  Differentiating Factor\n\nMetro\n\nData Center\n\n179+\n\nDigital Realty Facilities\n\nConnected Globally\n\n310+\n\nOn Ramps Available\n\nGlobally\n",
+          "cited": false
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 7,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## Digital Realty's Competitive Advantage\n\nScale, Connectivity, and Execution\n\n## Global Platform\n\nEmbedded internal expertise as the world's largest data center owner, operator, acquiror and developer\n\n## Supply Chain Management\n\nDedicated",
+          "cited": false
+        }
+      ],
+      "timings": {
+        "route_ms": 3029,
+        "retrieve_ms": 5538,
+        "n_candidates": 95,
+        "rerank_ms": 1654,
+        "generate_ms": 1565,
+        "total_ms": 16274
+      },
+      "judge": {
+        "result": "Partial",
+        "score": 3,
+        "critical_facts_found": [
+          "5,000+ Global Customers as of December 31, 2025 (Source 1)",
+          "5,000+ Customers as of September 30, 2025 (Source 4)"
+        ],
+        "critical_facts_missing": [
+          "5,500+ Customers as of December 31, 2025 (from page 3 of the March 2026 deck, which was not retrieved)"
+        ],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "good",
+        "likely_failure_stage": "retrieval",
+        "one_line_note": "The answer correctly identifies the 5,000+ customer count and associated dates from the retrieved sources. However, it misses the 5,500+ customer count from page 3 of the March 2026 deck, which was not retrieved, thus failing to address the within-document inconsistency."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.5,
+        "context_recall": 0.5
+      }
+    },
+    {
+      "id": "Q6",
+      "group": "B",
+      "group_name": "Intra-document inconsistency & footnote awareness",
+      "question": "What is BXP's dividend yield?",
+      "diagnoses": "Footnote-body integrity at the chunk level. The Investor Day dividend slide shows yield at 3.9% (chart body, using post-reset $0.70 × 4 / Aug 29, 2025 price). The Q4 deck shows ~5.2% (using a later 2026 stock price). Same dividend, different yields because stock price moved. Tests whether the parser keeps body and date-qualifier footnote in the same chunk, and whether retrieval surfaces both decks rather than just one.",
+      "answer": "BXP's dividend yield is reported as follows:\n\n*   **5.47%** per BXP presentation as of June 30, 2025 (calculated as of August 29, 2025) [1].\n*   **~3.9%** per BXP presentation as of June 30, 2025 (calculated as of September 2, 2025) [4].\n*   **4.7%** per BXP presentation as of December 31, 2025 (calculated as of February 24, 2026) [5].\n*   **5.2%** per BXP presentation as of December 31, 2025 (calculated as of March 10, 2026) [2].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1,
+        4,
+        5,
+        2
+      ],
+      "conflicts": [
+        {
+          "company": "BXP",
+          "as_of_dates": [
+            "2025-06-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 5,
+      "sources": [
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 49,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## RESET DIVIDEND\n\nBXP Was Overpaying the Dividend BXP Reset Dividend Yield: 3.9% 1 Average Office Dividend Yield: 4.5% 2 Average REIT Dividend Yield: 3.9% 2\n\n$-\n\n$0.50\n\n$1.00\n\n$1.50\n\n$2.00\n\n$2.50\n\n$3.00\n\n$3.50\n\n$4.00\n\n$4.50\n\n2018\n\n2019\n\n20",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 36,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## VALUATION AND YIELD ARE AT HISTORICALLY ATTRACTIVE LEVELS 1\n\nBXP trades at a meaningful discount while offering a materially higher yield than the broader market and our history\n\n7.7x\n\n29.2x\n\n5.2%\n\n1.2%\n\n0.0%\n\n1.0%\n\n2.0%\n\n3.0%\n\n4.0%\n\n5.0",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 94,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## HISTORICAL DEVELOPMENT PLACED IN-SERVICE: 'BXP'S DNA'\n\n$9.2B 1  of developments delivered in the past 12 years with an average stabilized yield of approximately 7%\n\n$-\n\n$200\n\n$400\n\n$600\n\n$800\n\n$1,000\n\n$1,200\n\n$1,400\n\n$1,600\n\n$1,800\n\n2014",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 101,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## THE DIVIDEND RESET BENEFITS 1\n\nDividend Reset Summary\n\nAnnualized Dividend of $2.80 Per Share\n\nEstimated Cash Retained through 2027 of ~$500M\n\nAccretive to FFO\n\nImproves Leverage by ~0.25x by year-end 2027\n\nLower leverage\n\n\n\nImproved Mu",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 3,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## BXP QUICK FACTS\n\nThe largest publicly traded developer, owner and manager of premier workplaces 1  in the U.S.\n\n179\n\nProperties 2\n\n52.6M\n\nSquare Feet Owned 2\n\n$3.3B\n\nBXP's Share of Annualized Revenue 7\n\nS&P 500\n\nCompany\n\n89.4%\n\nLeased (I",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 7270,
+        "retrieve_ms": 6712,
+        "n_candidates": 102,
+        "rerank_ms": 2353,
+        "generate_ms": 2137,
+        "total_ms": 23360
+      },
+      "judge": {
+        "result": "Partial",
+        "score": 3,
+        "critical_facts_found": [
+          "3.9% dividend yield",
+          "5.2% dividend yield"
+        ],
+        "critical_facts_missing": [
+          "The 3.9% yield is calculated using a post-reset $0.70 x 4 dividend and an August 29, 2025 stock price.",
+          "The 5.2% yield is from the Q4 deck and uses a later 2026 stock price."
+        ],
+        "incorrect_or_unsupported_claims": [
+          "5.47% per BXP presentation as of June 30, 2025 (calculated as of August 29, 2025)",
+          "4.7% per BXP presentation as of December 31, 2025 (calculated as of February 24, 2026)"
+        ],
+        "citation_quality": "weak",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The answer correctly identifies two dividend yields but hallucinates two others and fails to provide the crucial date-qualifier footnotes for the identified yields."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.8,
+        "context_recall": 1.0
+      }
+    },
+    {
+      "id": "Q7",
+      "group": "B",
+      "group_name": "Intra-document inconsistency & footnote awareness",
+      "question": "What was BXP's actual market dividend yield as of August 29, 2025?",
+      "diagnoses": "Footnote-as-truth-source contradicting the chart body. On the same slide where the chart body says \"3.9%,\" footnote 2 says \"BXP's dividend yield as of August 29, 2025 was 5.47%.\" The chart number is a normalized post-reset construct; the footnote is the actual market-implied figure. Tests the hardest version of footnote awareness: not \"footnote adds context\" but \"footnote contradicts the headline.\" Body-only chunkers will answer 3.9% with full confidence.",
+      "answer": "BXP's actual market dividend yield as of August 29, 2025, was 5.47% per BXP presentation as of June 30, 2025 [1].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1
+      ],
+      "conflicts": [
+        {
+          "company": "BXP",
+          "as_of_dates": [
+            "2025-06-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 5,
+      "sources": [
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 49,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## RESET DIVIDEND\n\nBXP Was Overpaying the Dividend BXP Reset Dividend Yield: 3.9% 1 Average Office Dividend Yield: 4.5% 2 Average REIT Dividend Yield: 3.9% 2\n\n$-\n\n$0.50\n\n$1.00\n\n$1.50\n\n$2.00\n\n$2.50\n\n$3.00\n\n$3.50\n\n$4.00\n\n$4.50\n\n2018\n\n2019\n\n20",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 36,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## VALUATION AND YIELD ARE AT HISTORICALLY ATTRACTIVE LEVELS 1\n\nBXP trades at a meaningful discount while offering a materially higher yield than the broader market and our history\n\n7.7x\n\n29.2x\n\n5.2%\n\n1.2%\n\n0.0%\n\n1.0%\n\n2.0%\n\n3.0%\n\n4.0%\n\n5.0",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 33,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## SHAREHOLDER PREFERENCES\n\nScale is Rewarded\n\n0%\n\n20%\n\n40%\n\n60%\n\n80%\n\n100%\n\nTriple Net\n\nStrip Center\n\nStorage\n\nSFR\n\nOffice\n\nMall\n\nIndustrial\n\nHotel REIT\n\nHealthcare\n\nDatacenter\n\nApartment\n\nSource: Capital IQ\n\n1.\n\nMarket data as of August 2",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 94,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## HISTORICAL DEVELOPMENT PLACED IN-SERVICE: 'BXP'S DNA'\n\n$9.2B 1  of developments delivered in the past 12 years with an average stabilized yield of approximately 7%\n\n$-\n\n$200\n\n$400\n\n$600\n\n$800\n\n$1,000\n\n$1,200\n\n$1,400\n\n$1,600\n\n$1,800\n\n2014",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 48,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "RECONCILIATIONS OF NON-GAAP FINANCIAL MEASURES AND OTHER FINANCIAL INFORMATION (UNAUDITED)\n\n## Debt to Market Capitalization Ratios\n\n(dollars in thousands, except per share amounts)\n\n48 APPENDIX\n\n|                                           ",
+          "cited": false
+        }
+      ],
+      "timings": {
+        "route_ms": 3288,
+        "retrieve_ms": 6566,
+        "n_candidates": 106,
+        "rerank_ms": 2362,
+        "generate_ms": 3830,
+        "total_ms": 19328
+      },
+      "judge": {
+        "result": "Pass",
+        "score": 5,
+        "critical_facts_found": [
+          "BXP's actual market dividend yield as of August 29, 2025 was 5.47%"
+        ],
+        "critical_facts_missing": [],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "good",
+        "likely_failure_stage": "none",
+        "one_line_note": "The answer correctly identified the actual market dividend yield from the footnote, demonstrating strong footnote awareness."
+      },
+      "ragas": {
+        "faithfulness": 0.5,
+        "answer_relevance": 1.0,
+        "context_precision": 0.2,
+        "context_recall": 1.0
+      }
+    },
+    {
+      "id": "Q8",
+      "group": "B",
+      "group_name": "Intra-document inconsistency & footnote awareness",
+      "question": "How has Digital Realty's customer credit-quality profile changed between the Dec 2025 and Mar 2026 presentations?",
+      "diagnoses": "Methodology change buried in footnotes. Both decks report ~50-51% investment-grade customers, but footnote 2 reveals the basis changed: Dec 2025 uses top-10 customers / $4.5B revenue; Mar 2026 uses top-100 customers / $6.1B revenue (10x expansion of customer sample, 36% revenue growth). Tests whether the system surfaces that \"the number changed from X to Y\" is meaningless because \"the way it was measured also changed.\"",
+      "answer": "I don't have enough information in the provided documents to answer how Digital Realty's customer credit-quality profile changed between the Dec 2025 and Mar 2026 presentations.\n\nThe provided sources contain the following information regarding Digital Realty's customer credit quality:\n*   **As of September 30, 2025:** Digital Realty reported that approximately 50% of its customers were \"Investment Grade\" [3].\n*   **As of December 31, 2025:** Digital Realty reported that approximately 51% of its customers were \"Investment Grade\" [2].\n\nThe provided documents do not contain a Digital Realty presentation dated March 2026. The documents referencing March 2026 [6, 8, 9] pertain to Public Storage, not Digital Realty.",
+      "intent": "lookup",
+      "cited_numbers": [
+        3,
+        2,
+        6,
+        8,
+        9
+      ],
+      "conflicts": [
+        {
+          "company": "Digital Realty",
+          "as_of_dates": [
+            "2025-09-30",
+            "2025-12-31"
+          ]
+        },
+        {
+          "company": "Public Storage",
+          "as_of_dates": [
+            "2026-03-01",
+            "2026-03-16"
+          ]
+        }
+      ],
+      "n_sources": 9,
+      "sources": [
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 24,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## Multi-Year Backlog Enhances Visibility\n\n- Backlog Represents >20% of In-place Annualized Rent\n\n- 85% of Backlog Expected to Commence through 2026\n\n*2) Historical backlog adjusted for asset sales and purchases, joint venture and fund cont",
+          "cited": false
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 23,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## High-Quality, Diversified Customer Base\n\n- Top customers have a presence in 36 different locations, on average\n\nCustomer Type (% by ARR) (1)\n\nCloud\n\n41%\n\nFinancial\n\n12%\n\nNetwork\n\n15%\n\nIT\n\nEnterprise\n\n9%\n\nContent\n\n14%\n\n10%\n\nInvestment\n\nGr",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 25,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## High-Quality, Diversified Customer Base\n\n- Top customers have a presence in 41 different locations, on average\n\nCustomer Type (% by ARR) (1)\n\nCloud\n\n41%\n\nFinancial\n\n12%\n\nNetwork\n\n15%\n\nIT\n\nEnterprise\n\n9%\n\nContent\n\n14%\n\n10%\n\n## High-Qualit",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 19,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## Enabling the Meeting Place\n\n## Record 0-1MW + Interconnection Bookings\n\n## 4Q25 Results\n\n155 new logos\n\n## $96M\n\nRecord total 4Q bookings from 0-1 MW + Interconnection\n\n55%\n\nof total 4Q bookings from 0-1 MW + Interconnection\n\n## 2025 Ful",
+          "cited": false
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 12,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## AI Platform Readiness\n\nAs power-dense workloads increase, Digital Realty's modular designs support advanced cooling solutions\n\n## Increase in Average Rack Density (1)\n\n70% Average rack density rises nearly in one year.\n\n-  Average rack ",
+          "cited": false
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 17,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## Important Information\n\nFORWARD-LOOKING STATEMENTS: This presentation contains forward-looking statements within the meaning of the Private Securities Litigation Reform Act of 1995. Forward-looking statements include statements relating t",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 30,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## Appendix Forward-Looking Statements\n\nThis information in this presentation contains forward-looking statements within the meaning of the federal securities laws, which are based on current expectations, forecasts and assumptions that inv",
+          "cited": false
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 9,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## Strong Track Record of Value Creation\n\n## Case Study: Margin Expansion on Recent Large Acquisitons 1\n\n72.6%\n\n81.8%\n\nPre-Acquisition\n\nTwo-Year Operated\n\neZ Storage\n\n63.5%\n\n73.1%\n\nPre-Acquisition\n\nTwo-Year Operated\n\nSimply Self Storage\n\n50",
+          "cited": true
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 1,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## Merger Presentation\n\nMarch 16, 2026\n\n1",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 2721,
+        "retrieve_ms": 6257,
+        "n_candidates": 106,
+        "rerank_ms": 2413,
+        "generate_ms": 16807,
+        "total_ms": 37400
+      },
+      "judge": {
+        "result": "Fail",
+        "score": 0,
+        "critical_facts_found": [],
+        "critical_facts_missing": [
+          "The candidate answer incorrectly states that there is no March 2026 presentation for Digital Realty. Source [2] is clearly titled \"Digital Realty_Investor Presentation March 2026.pdf\" and contains data as of 2025-12-31.",
+          "The candidate answer fails to identify the change in methodology for calculating investment-grade customers between the two presentations. The December 2025 presentation (Source [3]) states in footnote 2 that the investment-grade percentage is based on the top 10 customers representing $4.5 billion in annualized rent. The March 2026 presentation (Source [2]) states in footnote 2 that the investment-grade percentage is based on the top 100 customers representing $6.1 billion in annualized rent."
+        ],
+        "incorrect_or_unsupported_claims": [
+          "\"The provided documents do not contain a Digital Realty presentation dated March 2026.\""
+        ],
+        "citation_quality": "wrong",
+        "likely_failure_stage": "retrieval",
+        "one_line_note": "The candidate answer incorrectly claims that a March 2026 Digital Realty presentation is not available, despite it being in the sources. It also completely misses the core challenge of identifying the change in methodology for calculating investment-grade customers."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.2222222222222222,
+        "context_recall": 1.0
+      }
+    },
+    {
+      "id": "Q9",
+      "group": "B",
+      "group_name": "Intra-document inconsistency & footnote awareness",
+      "question": "In how many countries does Realty Income operate?",
+      "diagnoses": "Intra-document scope ambiguity. Pages 5 and 6 say \"10 countries\" (US + UK + 8 European); pages 15 and 31 say \"9 countries\" specifically in the European footprint context. Both correct under different definitions. Tests whether retrieval surfaces both with their scope qualifiers and generation resolves the apparent contradiction by reading surrounding context rather than flattening to one answer.",
+      "answer": "Realty Income operates in 10 countries [2]. This presence includes all 50 U.S. states, the U.K., and eight other countries in Europe [3].\n\n*Note: Sources [4] and [5] pertain to Digital Realty and do not contain information regarding Realty Income's country count.*",
+      "intent": "lookup",
+      "cited_numbers": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "conflicts": [
+        {
+          "company": "Digital Realty",
+          "as_of_dates": [
+            "2025-09-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 5,
+      "sources": [
+        {
+          "company": "Realty Income",
+          "doc_type": "presentation",
+          "page_number": 31,
+          "as_of_date": "2026-02-01",
+          "filename": "Realty Incom q4-2025-investor-presentation.pdf",
+          "snippet": "## Europe: A Fast-Growing, High-Quality Platform Opportunity\n\n## CONTINUED OPPORTUNITY IN THE REGION GIVEN A LARGER TOTAL ADDRESSABLE MARKET RELATIVE TO THE U.S., A FRAGMENTED COMPETITIVE LANDSCAPE, AND ATTRACTIVE RISK-ADJUSTED RETURNS\n\npro",
+          "cited": false
+        },
+        {
+          "company": "Realty Income",
+          "doc_type": "presentation",
+          "page_number": 6,
+          "as_of_date": "2026-02-01",
+          "filename": "Realty Incom q4-2025-investor-presentation.pdf",
+          "snippet": "## Why Realty Income\n\nA scaled, global technology-enabled platform delivering durable income and long-term value creation\n\n## Global Scale & Structural Advantages\n\n15,500+ properties across 10 countries\n\nFull-service real estate capital par",
+          "cited": true
+        },
+        {
+          "company": "Realty Income",
+          "doc_type": "presentation",
+          "page_number": 5,
+          "as_of_date": "2026-02-01",
+          "filename": "Realty Incom q4-2025-investor-presentation.pdf",
+          "snippet": "## A Global Leader Delivering Stable Income and Consistent Growth\n\nRealty Income, an S&P 500 company, is real estate partner to the world's leading companies ® . Founded in 1969, we serve our clients as a full-service real estate capital pr",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 34,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## Reconciliation of Non-GAAP Items To Their Closest GAAP\n\n## Equivalent\n\n## Digital Realty Trust, Inc. and Subsidiaries\n\nReconciliation of Same Capital Cash Net Operating Income (in thousands) (unaudited)\n\n34\n\n|                            ",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 32,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## Reconciliation of Non-GAAP Items To Their Closest GAAP\n\n## Equivalent\n\n## Digital Realty Trust, Inc. and Subsidiaries\n\nReconciliation of Same Capital Cash Net Operating Income (in thousands) (unaudited)\n\n32\n\n|                            ",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 17029,
+        "retrieve_ms": 5927,
+        "n_candidates": 98,
+        "rerank_ms": 2322,
+        "generate_ms": 1206,
+        "total_ms": 31882
+      },
+      "judge": {
+        "result": "Pass",
+        "score": 5,
+        "critical_facts_found": [
+          "Realty Income operates in 10 countries",
+          "This includes all 50 U.S. states, the U.K., and eight other countries in Europe."
+        ],
+        "critical_facts_missing": [],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "good",
+        "likely_failure_stage": "none",
+        "one_line_note": "The answer correctly identifies 10 countries and provides the breakdown, citing the relevant sources. It also correctly identifies irrelevant sources."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.6,
+        "context_recall": 1.0
+      }
+    },
+    {
+      "id": "Q10",
+      "group": "B",
+      "group_name": "Intra-document inconsistency & footnote awareness",
+      "question": "How big is EastGroup's portfolio?",
+      "diagnoses": "Qualifier-aware chunking. Page 3 says \"approximately 65 million square feet\" including development projects and value-add acquisitions in lease-up and under construction. Page 9 says \"65 Million Square Feet Under Ownership\" — a different scope. Tests whether the chunker keeps each number with its specific scope qualifier rather than producing two chunks that both say \"65M SF\" with the qualifier amputated.",
+      "answer": "As of February 1, 2026, EastGroup's portfolio includes approximately 65 million square feet, a figure that encompasses development projects and value-add acquisitions currently in lease-up or under construction [1].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1
+      ],
+      "conflicts": [],
+      "n_sources": 3,
+      "sources": [
+        {
+          "company": "EastGroup Properties, Inc.",
+          "doc_type": "roadshow",
+          "page_number": 3,
+          "as_of_date": "2026-02-01",
+          "filename": "EGP_2026_February_Roadshow_3.1_(Resize).pdf",
+          "snippet": "## Company Profile\n\nEastGroup  Properties,  Inc.  (NYSE:  EGP),  a  member  of  the  S&P  Mid-Cap  400  and  Russell  2000  Indexes,  is  a  selfadministered equity real estate investment trust focused on the development, acquisition and op",
+          "cited": true
+        },
+        {
+          "company": "EastGroup Properties, Inc.",
+          "doc_type": "roadshow",
+          "page_number": 6,
+          "as_of_date": "2026-02-01",
+          "filename": "EGP_2026_February_Roadshow_3.1_(Resize).pdf",
+          "snippet": "## Geographic Focus\n\n- High-Growth Markets\n\n- Emphasis in Local Economies Growing Faster than the U.S. Economy\n\n- Economic Cycle Diversification\n\nSan Francisco\n\nLOS ANGELES\n\n6\n\nProperties\n\nCorporate Headquarters\n\nRegional Offices\n\nOrlando\n\n",
+          "cited": false
+        },
+        {
+          "company": "EastGroup Properties, Inc.",
+          "doc_type": "roadshow",
+          "page_number": 37,
+          "as_of_date": "2026-02-01",
+          "filename": "EGP_2026_February_Roadshow_3.1_(Resize).pdf",
+          "snippet": "## Environmental Stewardship\n\nEastGroup  places  heavy  focus  on  incorporating  sustainable  design  features  in  our  development  properties,  allowing  us  to integrate  energy  efficient  systems  and  eco-friendly  design  into  our",
+          "cited": false
+        }
+      ],
+      "timings": {
+        "route_ms": 7277,
+        "retrieve_ms": 5420,
+        "n_candidates": 95,
+        "rerank_ms": 1837,
+        "generate_ms": 981,
+        "total_ms": 20814
+      },
+      "judge": {
+        "result": "Partial",
+        "score": 3,
+        "critical_facts_found": [
+          "approximately 65 million square feet",
+          "encompasses development projects and value-add acquisitions currently in lease-up or under construction"
+        ],
+        "critical_facts_missing": [
+          "65 Million Square Feet Under Ownership"
+        ],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "good",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The answer correctly identifies one scope of the portfolio size but misses the other scope mentioned in the document, which was the primary test of this question."
+      },
+      "ragas": {
+        "faithfulness": 0.6666666666666666,
+        "answer_relevance": 1.0,
+        "context_precision": 0.3333333333333333,
+        "context_recall": 0.6666666666666666
+      }
+    },
+    {
+      "id": "Q11",
+      "group": "C",
+      "group_name": "Document-type and scope distinctions",
+      "question": "What is Public Storage's NOI margin?",
+      "diagnoses": "Document-type metadata as a first-class field. Standalone Company Update (March 2026) reports 78% margin for PSA. Merger Presentation (March 16, 2026) reports the same 78% PSA standalone, plus 69% NSA and 77% pro-forma combined. Same company, same month, different document purposes. Tests whether the system tags document_type (\"Company Update\" vs \"Merger Presentation\") and presents each scope with attribution. Without doc-type metadata, retrieval mixes standalone and pro-forma chunks and the LLM produces confused or wrong answers.",
+      "answer": "Public Storage's NOI margin is reported as follows:\n\n*   **78%** per Public Storage presentation as of 2026-03-01 [1, 3].\n*   **78%** per Public Storage presentation as of 2026-03-16 [2].\n*   **78.2%** per Public Storage presentation as of 2026-03-16 (specifically identified as a \"Direct NOI Margin Comparison\" based on the trailing twelve months ended December 31, 2025) [4].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1,
+        3,
+        2,
+        4
+      ],
+      "conflicts": [
+        {
+          "company": "Public Storage",
+          "as_of_dates": [
+            "2026-03-01",
+            "2026-03-16"
+          ]
+        }
+      ],
+      "n_sources": 4,
+      "sources": [
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 6,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## A Superior Cash Flow Profile\n\nPublic Storage's competitive advantages combine with industry dynamics to drive robust cash flows and returns\n\n## Strong NOI Growth 1\n\n78%\n\n58%\n\nPublic\n\nStorage\n\nOther Property\n\nTypes\n\nHigh NOI Margin\n\n1\n\n6%",
+          "cited": true
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 7,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## PS4.0 TM Platform Advantages\n\n$21\n\n$20\n\n$19\n\n$19\n\n$13\n\nSame-Store RevPAF\n\n(2025)\n\n$0.74\n\n$0.99\n\n$1.20\n\n$1.26\n\n$1.43\n\nMost Optimized Labor Hours 3\n\n(payroll costs per square foot)\n\n#1\n\nMost\n\nOptimized\n\n14 / 20\n\nTop-Market 2\n\nPremium\n\n$0.2",
+          "cited": true
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 8,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## Transformation Is Enhancing Our Leading Performance\n\nCompany-wide advantages and transformation drive operational and financial outperformance\n\nPublic Storage\n\nExtra Space\n\nSmartStop\n\nCubeSmart\n\nNational Storage Affiliates\n\n## Highest Fr",
+          "cited": true
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 9,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## Strong Track Record of Value Creation\n\n## Case Study: Margin Expansion on Recent Large Acquisitons 1\n\n72.6%\n\n81.8%\n\nPre-Acquisition\n\nTwo-Year Operated\n\neZ Storage\n\n63.5%\n\n73.1%\n\nPre-Acquisition\n\nTwo-Year Operated\n\nSimply Self Storage\n\n50",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 2703,
+        "retrieve_ms": 6589,
+        "n_candidates": 103,
+        "rerank_ms": 2345,
+        "generate_ms": 843,
+        "total_ms": 17073
+      },
+      "judge": {
+        "result": "Partial",
+        "score": 3,
+        "critical_facts_found": [
+          {
+            "fact": "Public Storage's NOI margin is 78% as of 2026-03-01 (Company Update)."
+          },
+          {
+            "fact": "Public Storage's NOI margin is 78% as of 2026-03-16 (Merger Presentation, standalone)."
+          }
+        ],
+        "critical_facts_missing": [
+          {
+            "fact": "The Merger Presentation (2026-03-16) also reports NSA's NOI margin as 69% and the pro-forma combined margin as 77%."
+          }
+        ],
+        "incorrect_or_unsupported_claims": [
+          {
+            "claim": "78.2% per Public Storage presentation as of 2026-03-16 (specifically identified as a 'Direct NOI Margin Comparison' based on the trailing twelve months ended December 31, 2025) [4].",
+            "reason": "Source [4] does not state 78.2% for Public Storage's NOI margin. It shows 'Pre-Acquisition' and 'Two-Year Operated' margins for eZ Storage and Simply Self Storage, which are 72.6%, 81.8%, 63.5%, and 73.1% respectively. It does not mention 78.2% for Public Storage itself."
+          }
+        ],
+        "citation_quality": "weak",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The answer correctly identifies the 78% margin from both documents but misses the pro-forma and NSA margins from the merger presentation. It also hallucinates a 78.2% margin and misattributes it to source [4]."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 1.0,
+        "context_recall": 0.42857142857142855
+      }
+    },
+    {
+      "id": "Q12",
+      "group": "C",
+      "group_name": "Document-type and scope distinctions",
+      "question": "What is PSA's outlook for 2026?",
+      "diagnoses": "Standalone vs incremental scope. Company Update (page 15) projects organic decline: revenue -2.2% to 0.0%, NOI -3.9% to -0.5%. Merger Presentation says the announced NSA acquisition is FFO-neutral in 2026, then $0.10-0.20 accretive in 2027, $0.35-0.50 at stabilization. These are additive, not contradictory. Tests whether the system presents both with their scopes labeled, rather than blending into a falsely averaged outlook.",
+      "answer": "Public Storage’s 2026 outlook includes the following metrics and strategic expectations:\n\n### **2026 Financial Outlook Metrics**\nAs of March 1, 2026, Public Storage provided the following outlook ranges and midpoints for its key metrics [1]:\n\n| Metric | Outlook Range | Midpoint |\n| :--- | :--- | :--- |\n| **Same Store Revenue Growth** | (2.2)% to 0.0% | (1.1)% |\n| **Same Store Expense Growth** | 1.5% to 2.8% | 2.2% |\n| **Same Store NOI Growth** | (3.9)% to (0.5)% | (2.2)% |\n| **Non-Same Store NOI** | $335M to $355M | $345M |\n| **Non-Same Store NOI Growth** | 12.8% to 19.5% | 16.2% |\n| **Core FFO per Share** | $16.35 to $17.00 | $16.68 |\n| **Core FFO per Share Growth** | (3.7)% to 0.2% | (1.7)% |\n\n### **Strategic Outlook and Industry Context**\n*   **Acquisition of NSA:** As of March 16, 2026, Public Storage expects to complete a 100% stock acquisition of National Storage Affiliates (NSA) in Q3 2026, subject to approval and closing conditions [3]. The transaction is expected to be neutral to FFO/share in 2026 [3].\n*   **Industry Backdrop:** As of March 1, 2026, the company anticipates an improving industry backdrop characterized by rising demand and a decline in competitive new supply, with new supply growth estimated at 2.0% for 2026 [4].\n*   **Dividends:** As of March 1, 2026, Public Storage is projected to be one of the largest U.S. REIT dividend payers in 2026, with an estimated annualized dividend payout of $2.1 billion [7].\n\n### **Forward-Looking Statements**\nPublic Storage notes that its 2026 guidance and underlying assumptions are subject to risks and uncertainties, including macroeconomic conditions, inflation, property tax changes, and supply/demand dynamics [2]. Actual results may differ materially from these forward-looking statements [2].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1,
+        3,
+        4,
+        7,
+        2
+      ],
+      "conflicts": [
+        {
+          "company": "Public Storage",
+          "as_of_dates": [
+            "2026-03-01",
+            "2026-03-16"
+          ]
+        }
+      ],
+      "n_sources": 7,
+      "sources": [
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 15,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## 2026 Outlook:  Key Metrics\n\nSource: Company filings\n\n15 15\n\n|                           | 2026             | 2026     |\n|---------------------------|------------------|----------|\n| Metric                    | Outlook Range    | Midpoint",
+          "cited": true
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 17,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## Important Information\n\nFORWARD-LOOKING STATEMENTS: This presentation contains forward-looking statements within the meaning of the Private Securities Litigation Reform Act of 1995. Forward-looking statements include statements relating t",
+          "cited": true
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 2,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## Transaction Summary\n\n- Combines #1 and #5 self-storage owners and operators -driving scale, brand, and customer experience\n\n- Positions company to outperform as self storage fundamentals improve from cycle lows\n\n- PS4.0 leadership, compe",
+          "cited": true
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 5,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## Self-Storage Industry Outlook\n\n## Rising demand, affordable rents, and declining competitive new supply underpin an improving industry backdrop\n\n*Rising Utilization % of Population Using Self Storage 1*\n\n3%\n\n4%\n\n6%\n\n8%\n\n10%\n\n1985\n\n1995\n\n",
+          "cited": true
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 7,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## PS4.0 TM Platform Advantages\n\n$21\n\n$20\n\n$19\n\n$19\n\n$13\n\nSame-Store RevPAF\n\n(2025)\n\n$0.74\n\n$0.99\n\n$1.20\n\n$1.26\n\n$1.43\n\nMost Optimized Labor Hours 3\n\n(payroll costs per square foot)\n\n#1\n\nMost\n\nOptimized\n\n14 / 20\n\nTop-Market 2\n\nPremium\n\n$0.2",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 25,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## 290 BINNEY STREET\n\n## Delivers in 2026 and Will Provide Significant Cash Flow\n\n## Joint Venture:\n\n- 55% BXP | 45% NBIM Joint Venture\n\n- NBIM's investment reduced BXP's share of development cost by $534 million and reduces BXP's corporate",
+          "cited": false
+        },
+        {
+          "company": "VICI Properties",
+          "doc_type": "presentation",
+          "page_number": 27,
+          "as_of_date": "2026-03-01",
+          "filename": "VICI-Investor-Presentation-Mar-26_.pdf",
+          "snippet": "## …AND ONE OF THE LARGEST US REIT DIVIDEND PAYERS\n\n## US REITs' Largest Dividend Payers ($Bn) | 2026E\n\nAmerican Tower Corporation\n\nUSD $3.4 Bn\n\nRealty Income\n\nCorporation\n\nUSD $3.0 Bn\n\nPublic Storage\n\nUSD $2.1 Bn\n\nEquinix, Inc.\n\nUSD $2.0 B",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 3896,
+        "retrieve_ms": 6177,
+        "n_candidates": 87,
+        "rerank_ms": 2341,
+        "generate_ms": 5300,
+        "total_ms": 21107
+      },
+      "judge": {
+        "result": "Pass",
+        "score": 5,
+        "critical_facts_found": [
+          {
+            "fact": "Same Store Revenue Growth: (2.2)% to 0.0%"
+          },
+          {
+            "fact": "Same Store NOI Growth: (3.9)% to (0.5)%"
+          },
+          {
+            "fact": "NSA acquisition is FFO-neutral in 2026"
+          },
+          {
+            "fact": "Industry backdrop improving with rising demand and declining new supply"
+          },
+          {
+            "fact": "Projected to be one of the largest U.S. REIT dividend payers in 2026"
+          }
+        ],
+        "critical_facts_missing": [],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "good",
+        "likely_failure_stage": "none",
+        "one_line_note": "The answer correctly identifies and separates the organic outlook from the impact of the NSA acquisition, clearly labeling their scopes."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.2857142857142857,
+        "context_recall": 0.7777777777777778
+      }
+    },
+    {
+      "id": "Q13",
+      "group": "C",
+      "group_name": "Document-type and scope distinctions",
+      "question": "What percentage of BXP's portfolio is in CBD markets?",
+      "diagnoses": "Metric-definition awareness across decks. Investor Day page 18 reports CBD = 90.5% of NOI as of Q2 2025 (and shows 70.9% in Q2 2020 — strategic shift). Q4 deck page 7 says CBD = ~90% of Annualized Rental Obligations. Q4 deck page 9 says CBD = 90.8% of NOI. Same approximate number, different metrics (NOI vs ARO), different as-of dates. Tests whether the system distinguishes the metric definitions rather than treating the numbers as duplicates.",
+      "answer": "The percentage of BXP's portfolio in CBD markets is reported as follows:\n\n*   **90.8%** of BXP's share of Net Operating Income (NOI) is in CBD markets per BXP presentation as of 2025-12-31 [2].\n*   **~90%** of BXP's annualized rental obligations are represented by the CBD portfolio per BXP presentation as of 2025-12-31 [4].\n*   **90.5%** of BXP's share of NOI was in CBD markets per BXP presentation as of 2025-06-30 [3].",
+      "intent": "lookup",
+      "cited_numbers": [
+        2,
+        4,
+        3
+      ],
+      "conflicts": [
+        {
+          "company": "BXP",
+          "as_of_dates": [
+            "2025-06-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 4,
+      "sources": [
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 42,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## STICK WITH OUR EXISTING FOOTPRINT\n\nFuture Opportunities for Growth\n\n1. Source: CBRE Econometrics Advisors (EA) Q2 2025; assets identified as 'prime' or 'premier' by CBRE EA. 2. Excludes the hotel property and residential units.\n\nBXP 2025",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 9,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## BXP IS DIVERSIFIED ACROSS U.S. MARKETS\n\nWith the right assets and markets, BXP's portfolio aligns with where corporate demand is going\n\n## BXP's Share of Net Operating Income (NOI) 1\n\n*1. Excluding termination income. See Appendix.*\n\nBos",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 18,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## REMOTE WORK: IMPACT\n\nMore CBD, Less Suburban\n\n*BXP's Share of NOI 1*\n\n88.2%\n\n11.8%\n\nQ2 2020\n\nCBD\n\nSuburban\n\n90.5%\n\n9.5%\n\nQ2 2025\n\nCBD\n\nSuburban\n\n*BXP Occupancy*\n\n95.2%\n\n85.8%\n\n89.9%\n\n70.9%\n\n50%\n\n60%\n\n70%\n\n80%\n\n90%\n\n100%\n\nCBD\n\nSuburban\n\nQ",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 7,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## STRONG LEASING MOMENTUM POSITIONS BXP FOR OCCUPANCY GROWTH\n\nSigned 1.8M 1  SF of leases in Q4 2025, representing a ~19% increase from Q3 2025\n\n- -Weighted-average lease term of 11.3 years for leases signed in Q4 2025 1,2\n\n- -Represents ~",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 2685,
+        "retrieve_ms": 5872,
+        "n_candidates": 82,
+        "rerank_ms": 1988,
+        "generate_ms": 3407,
+        "total_ms": 18580
+      },
+      "judge": {
+        "result": "Pass",
+        "score": 5,
+        "critical_facts_found": [
+          "90.8% of NOI in CBD markets as of 2025-12-31",
+          "~90% of annualized rental obligations in CBD markets as of 2025-12-31",
+          "90.5% of NOI in CBD markets as of 2025-06-30"
+        ],
+        "critical_facts_missing": [],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "good",
+        "likely_failure_stage": "none",
+        "one_line_note": "The answer correctly identifies and distinguishes between the different metrics (NOI vs. Annualized Rental Obligations) and their respective as-of dates, with accurate citations."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.75,
+        "context_recall": 0.6666666666666666
+      }
+    },
+    {
+      "id": "Q14",
+      "group": "C",
+      "group_name": "Document-type and scope distinctions",
+      "question": "What is the average occupancy difference between Public Storage and NSA's same-store portfolios?",
+      "diagnoses": "Table parsing with column-to-entity preservation. PSA Merger Presentation page 4 has a 3-column comparison table: PSA 92.0% / NSA 84.3% / Pro Forma 90.3% — a 7.7 pp gap. Pure pdftotext produces a chunk like \"92.0% 84.3% 90.3%\" with no column labels attached. Tests whether the parser is table-aware (Docling, etc.) and produces structured rows where each value carries its column identity.",
+      "answer": "I don't have enough information in the provided documents to answer that.\n\nThe provided documents contain the \"Same-Store Average Occupancy\" for Public Storage as 92.0% (based on the trailing twelve months ended December 31, 2025) [2]. However, the provided materials do not disclose the same-store occupancy for National Storage Affiliates (NSA). While the documents provide other performance metrics for NSA—such as same-store revenue growth, NOI growth, and NOI margin [1, 4]—they do not report an occupancy percentage for its same-store portfolio.",
+      "intent": "compare",
+      "cited_numbers": [
+        2,
+        1,
+        4
+      ],
+      "conflicts": [
+        {
+          "company": "Public Storage",
+          "as_of_dates": [
+            "2026-03-01",
+            "2026-03-16"
+          ]
+        },
+        {
+          "company": "BXP",
+          "as_of_dates": [
+            "2025-06-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 9,
+      "sources": [
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 7,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## PS4.0 TM Platform Advantages\n\n$21\n\n$20\n\n$19\n\n$19\n\n$13\n\nSame-Store RevPAF\n\n(2025)\n\n$0.74\n\n$0.99\n\n$1.20\n\n$1.26\n\n$1.43\n\nMost Optimized Labor Hours 3\n\n(payroll costs per square foot)\n\n#1\n\nMost\n\nOptimized\n\n14 / 20\n\nTop-Market 2\n\nPremium\n\n$0.2",
+          "cited": true
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 4,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## Creating a Leading Owned Storage Platform\n\nEnterprise Value (billions)\n\n$66.6\n\n$10.5\n\n$77.1\n\nNumber of Stores 1  / NRSF (millions)\n\n3,533 / 258\n\n1,063 / 69\n\n4,596 / 328\n\nNumber of States\n\n(including Puerto Rico)\n\n40\n\n38\n\n42\n\nComposition ",
+          "cited": true
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 4,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## Improving Move-In Rates, Occupancy & Retention\n\n(5.5%)\n\n(5.5%)\n\n(5.3%)\n\n(10.6%)\n\n(4.7%)\n\n(12%)\n\n(8%)\n\n(4%)\n\n0%\n\n4%\n\n8%\n\n1Q25\n\n2Q25\n\n3Q25\n\n4Q25\n\nYTD 2026\n\n## Same-Store Move-In Rate (y/y %)\n\n## Same-Store Move-Out Rate (y/y %)\n\n(1.8%)\n\n(2",
+          "cited": false
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 7,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## Looking Back On Our Success\n\nCompetitive advantages and transformation have driven outperformance and created a solid foundation for future success\n\n1.4%\n\n0.5%\n\n0.3%\n\n-1.6%\n\nPSA\n\nEXR\n\nCUBE\n\nNSA\n\n0.8%\n\n-0.7%\n\n-0.8%\n\n-3.6%\n\nPSA\n\nCUBE\n\nEXR\n",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 79,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## PRO FORMA SAME STORE OCCUPANCY FOR YEAR END 2026 1\n\n*1. Includes 100% of consolidated and unconsolidated properties. See Appendix for information on forward-looking statements. Information is based on the in-service portfolio as of June ",
+          "cited": false
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 15,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## 2026 Outlook:  Key Metrics\n\nSource: Company filings\n\n15 15\n\n|                           | 2026             | 2026     |\n|---------------------------|------------------|----------|\n| Metric                    | Outlook Range    | Midpoint",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 109,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## OPERATING CASH FLOW:  OCCUPANCY GROWTH 1\n\n1. See Appendix for information on forward-looking statements. Information is based on the in-service portfolio as of June 30, 2025. 2. As of December 31, 2027.  Projected data is calculated base",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 17,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## AI RESILIENCE: CLIENT MIX + STRUCTURAL STABILITY\n\nOur Diversified Client Base, Limited Rollover, Long WALT & Financial Structure Provide Earnings Stability\n\n## CLIENT BASE CONCENTRATED IN STRATEGIC, FRONT-OFFICE ROLES 1\n\n0.0%\n\n20.0%\n\n40.",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 6,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## Q1 LEASING ACTIVITY TO DATE SUPPORTING OUR OCCUPANCY OUTLOOK\n\n3.0M SF Pipeline Supports Continued Occupancy Gains Through 2026 and Acceleration Into 2027\n\n## Q1 ACTIVITY AND PIPELINE VISIBILITY\n\nLeases Signed as of 2/27/26:  600,000 SF\n\n",
+          "cited": false
+        }
+      ],
+      "timings": {
+        "route_ms": 3037,
+        "retrieve_ms": 6955,
+        "n_candidates": 143,
+        "rerank_ms": 2382,
+        "generate_ms": 3949,
+        "total_ms": 25457
+      },
+      "judge": {
+        "result": "Fail",
+        "score": 0,
+        "critical_facts_found": [],
+        "critical_facts_missing": [
+          "Public Storage same-store average occupancy: 92.0%",
+          "NSA same-store average occupancy: 84.3%",
+          "Difference: 7.7 percentage points"
+        ],
+        "incorrect_or_unsupported_claims": [
+          "The provided materials do not disclose the same-store occupancy for National Storage Affiliates (NSA)."
+        ],
+        "citation_quality": "weak",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The model incorrectly claims that NSA's same-store occupancy is not disclosed, despite it being present in Source 2 within a table."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.1111111111111111,
+        "context_recall": 1.0
+      }
+    },
+    {
+      "id": "Q15",
+      "group": "D",
+      "group_name": "Chart, table, and map parsing",
+      "question": "Among the major self-storage REITs, what is each company's same-store NOI growth and NOI margin?",
+      "diagnoses": "The production-readiness test. PSA Company Update page 7 has six bar subcharts in a 2x3 grid. The legend strip at the bottom reads \"PSA / CubeSmart / Extra Space / NSA\" — a fixed order. But each subchart re-sorts the four peers by performance ranking, so NOI growth has order PSA / CUBE / EXR / NSA while NOI margin has PSA / EXR / CUBE / NSA. The legend is at a third order. Text extraction yields a row of numbers with no reliable mapping to companies. Tests: (a) parser uses vision/OCR with spatial coordinates that tie each bar value to its per-subchart label (not the legend), (b) the system honestly reports if it cannot make this mapping.",
+      "answer": "Based on the provided documents, the same-store NOI growth (2023–2025 average) and NOI margin for major self-storage REITs are as follows:\n\n### **Same-Store NOI Growth (2023–2025 Average)**\n*   **Public Storage:** 0.8% per presentation as of 2026-03-01 [1] and 2026-03-16 [2].\n*   **Extra Space:** -0.7% per presentation as of 2026-03-01 [1] and 2026-03-16 [2].\n*   **CubeSmart:** -0.8% per presentation as of 2026-03-01 [1] and 2026-03-16 [2].\n*   **National Storage Affiliates:** -3.6% per presentation as of 2026-03-01 [1] and 2026-03-16 [2].\n\n### **Same-Store NOI Margin**\nThe reported margins vary by source and methodology:\n\n*   **Public Storage:** 78% per presentation as of 2026-03-01 [1, 5] and 2026-03-16 [2].\n*   **Extra Space:** 71% per presentation as of 2026-03-01 [1, 5] and 2026-03-16 [2].\n*   **CubeSmart:** 71% per presentation as of 2026-03-01 [1, 5] and 2026-03-16 [2].\n*   **National Storage Affiliates:** \n    *   69% per presentation as of 2026-03-01 [1, 5].\n    *   69% per presentation as of 2026-03-16 [2].\n*   **SmartStop:** 67% per presentation as of 2026-03-16 [2].\n\n*Note: Source [1] specifies that NOI margin figures reflect the fiscal-year 2025 average, while source [5] notes its margin figures are for the same-store pool for the quarter ended 12/31/25.*",
+      "intent": "compare",
+      "cited_numbers": [
+        1,
+        2,
+        5
+      ],
+      "conflicts": [
+        {
+          "company": "Public Storage",
+          "as_of_dates": [
+            "2026-03-01",
+            "2026-03-16"
+          ]
+        }
+      ],
+      "n_sources": 5,
+      "sources": [
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 7,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## Looking Back On Our Success\n\nCompetitive advantages and transformation have driven outperformance and created a solid foundation for future success\n\n1.4%\n\n0.5%\n\n0.3%\n\n-1.6%\n\nPSA\n\nEXR\n\nCUBE\n\nNSA\n\n0.8%\n\n-0.7%\n\n-0.8%\n\n-3.6%\n\nPSA\n\nCUBE\n\nEXR\n",
+          "cited": true
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 7,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## PS4.0 TM Platform Advantages\n\n$21\n\n$20\n\n$19\n\n$19\n\n$13\n\nSame-Store RevPAF\n\n(2025)\n\n$0.74\n\n$0.99\n\n$1.20\n\n$1.26\n\n$1.43\n\nMost Optimized Labor Hours 3\n\n(payroll costs per square foot)\n\n#1\n\nMost\n\nOptimized\n\n14 / 20\n\nTop-Market 2\n\nPremium\n\n$0.2",
+          "cited": true
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 6,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## A Superior Cash Flow Profile\n\nPublic Storage's competitive advantages combine with industry dynamics to drive robust cash flows and returns\n\n## Strong NOI Growth 1\n\n78%\n\n58%\n\nPublic\n\nStorage\n\nOther Property\n\nTypes\n\nHigh NOI Margin\n\n1\n\n6%",
+          "cited": false
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 9,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## Strong Track Record of Value Creation\n\n## Case Study: Margin Expansion on Recent Large Acquisitons 1\n\n72.6%\n\n81.8%\n\nPre-Acquisition\n\nTwo-Year Operated\n\neZ Storage\n\n63.5%\n\n73.1%\n\nPre-Acquisition\n\nTwo-Year Operated\n\nSimply Self Storage\n\n50",
+          "cited": false
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 8,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## Transformation Is Enhancing Our Leading Performance\n\nCompany-wide advantages and transformation drive operational and financial outperformance\n\nPublic Storage\n\nExtra Space\n\nSmartStop\n\nCubeSmart\n\nNational Storage Affiliates\n\n## Highest Fr",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 2670,
+        "retrieve_ms": 6733,
+        "n_candidates": 130,
+        "rerank_ms": 2356,
+        "generate_ms": 10156,
+        "total_ms": 26530
+      },
+      "judge": {
+        "result": "Partial",
+        "score": 3,
+        "critical_facts_found": [
+          {
+            "fact": "Public Storage same-store NOI growth: 0.8%"
+          },
+          {
+            "fact": "Extra Space same-store NOI growth: -0.7%"
+          },
+          {
+            "fact": "CubeSmart same-store NOI growth: -0.8%"
+          },
+          {
+            "fact": "National Storage Affiliates same-store NOI growth: -3.6%"
+          },
+          {
+            "fact": "Public Storage NOI margin: 78%"
+          },
+          {
+            "fact": "Extra Space NOI margin: 71%"
+          },
+          {
+            "fact": "CubeSmart NOI margin: 71%"
+          },
+          {
+            "fact": "National Storage Affiliates NOI margin: 69%"
+          }
+        ],
+        "critical_facts_missing": [],
+        "incorrect_or_unsupported_claims": [
+          "The candidate answer incorrectly attributes the NOI margin for SmartStop (67%) to source [2]. Source [2] does not contain this information. The 67% for SmartStop is found in source [5]."
+        ],
+        "citation_quality": "weak",
+        "likely_failure_stage": "citation",
+        "one_line_note": "The answer correctly extracts most data points but has a hallucinated citation for SmartStop's NOI margin."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.6,
+        "context_recall": 0.5454545454545454
+      }
+    },
+    {
+      "id": "Q16",
+      "group": "D",
+      "group_name": "Chart, table, and map parsing",
+      "question": "Who is VICI's largest tenant by rent, and what percentage of rent do they represent?",
+      "diagnoses": "Logo-rendered identity + honesty about extraction limits. VICI page 7's tenant table has 13 rows. The rent percentages (39%, 34%, 9%, 5%, ...) are extractable text. The tenant names are rendered as logo images and yield nothing from text extraction. Tests: (a) the system surfaces the percentages it has rather than refusing to answer, (b) either uses vision/OCR on the logos or cross-references other pages where Caesars and MGM appear as named tenants in body text, (c) honestly states which parts are vision-extracted vs cross-referenced vs unknown. The wrong behavior is silently inventing tenant names.",
+      "answer": "VICI's largest tenant by rent represents 39% of its annualized cash rent [1]. The provided source does not explicitly name this tenant, listing it only as the first entry in the tenant table [1].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1
+      ],
+      "conflicts": [],
+      "n_sources": 3,
+      "sources": [
+        {
+          "company": "VICI Properties",
+          "doc_type": "presentation",
+          "page_number": 7,
+          "as_of_date": "2026-03-01",
+          "filename": "VICI-Investor-Presentation-Mar-26_.pdf",
+          "snippet": "## MARKET -LEADING REAL ESTATE OCCUPIED BY MARKET -LEADING EXPERIENTIAL OPERATORS\n\n79%\n\nRent Roll from SEC Reporting Tenants\n\n100%\n\nTriple Net Leases\n\n90%\n\nRent Roll with Parent Guarantees\n\n83%\n\nRent Roll with Master Lease Protection\n\n100%\n",
+          "cited": true
+        },
+        {
+          "company": "VICI Properties",
+          "doc_type": "presentation",
+          "page_number": 5,
+          "as_of_date": "2026-03-01",
+          "filename": "VICI-Investor-Presentation-Mar-26_.pdf",
+          "snippet": "## VICI'S INVESTMENT HIGHLIGHTS\n\nVICI Properties Inc. (NYSE: VICI) is a triple net lease REIT that owns one of the largest high-quality portfolios of market-leading gaming, hospitality, wellness, entertainment and leisure destinations\n\n## D",
+          "cited": false
+        },
+        {
+          "company": "Realty Income",
+          "doc_type": "presentation",
+          "page_number": 10,
+          "as_of_date": "2026-02-01",
+          "filename": "Realty Incom q4-2025-investor-presentation.pdf",
+          "snippet": "## Highly Diversified Portfolio Across Clients, Industries, and Geographies\n\n## CLIENT DIVERSIFICATION - TOP 20 CLIENTS\n\n1.5%\n\n1.5%\n\n1.4%\n\n1.4%\n\n1.1%\n\n1.1%\n\n1.1%\n\n1.0%\n\n1.0%\n\n1.0%\n\nDenotes IG-\n\nRated Client (2)\n\n(3)\n\n7-Eleven\n\nDollar Genera",
+          "cited": false
+        }
+      ],
+      "timings": {
+        "route_ms": 4532,
+        "retrieve_ms": 6497,
+        "n_candidates": 128,
+        "rerank_ms": 3090,
+        "generate_ms": 734,
+        "total_ms": 19485
+      },
+      "judge": {
+        "result": "Partial",
+        "score": 3,
+        "critical_facts_found": [
+          "39% of annualized cash rent",
+          "The source does not explicitly name the tenant"
+        ],
+        "critical_facts_missing": [],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "good",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The answer correctly identifies the percentage and states that the tenant name is not explicitly provided in the source. However, it fails to acknowledge that the tenant name is represented by a logo image, which is a nuance of the source material that could be addressed by a more advanced system (e.g., using OCR or cross-referencing)."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 0.7,
+        "context_precision": 0.3333333333333333,
+        "context_recall": 0.8333333333333334
+      }
+    },
+    {
+      "id": "Q17",
+      "group": "D",
+      "group_name": "Chart, table, and map parsing",
+      "question": "What are VICI's 10 trophy assets on the Las Vegas Strip?",
+      "diagnoses": "Map-rendered property names + intra-document cross-page synthesis. VICI page 14 claims \"10 Trophy Assets on the Las Vegas Strip\" but text extraction yields only \"MGM Grand\" — the other 9 names are baked into the map graphic. However, pages 13 (Recently Reimagined Assets) and 16 (Sports Triangle) name several of the same properties in body text: Caesars Palace, Venetian Resort Las Vegas, MGM Grand, Mandalay Bay, Park MGM, New York-New York, Excalibur, Luxor. Tests whether the system performs cross-page synthesis within the same document to reconstruct what the map graphic encoded.",
+      "answer": "I don't have enough information in the provided documents to answer that. \n\nWhile the provided presentation [1] states that VICI owns \"10 trophy assets on the Las Vegas Strip,\" it does not list the names of those 10 specific assets. The document only explicitly identifies the MGM Grand [1] and notes that VICI owns the land under the Las Vegas Sphere [1].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1
+      ],
+      "conflicts": [],
+      "n_sources": 3,
+      "sources": [
+        {
+          "company": "VICI Properties",
+          "doc_type": "presentation",
+          "page_number": 14,
+          "as_of_date": "2026-03-01",
+          "filename": "VICI-Investor-Presentation-Mar-26_.pdf",
+          "snippet": "## …WITH 10 TROPHY ASSETS ON THE LAS VEGAS STRIP\n\nVICI Owns 660 Acres of Underlying Land, ~41,400 Hotel Rooms and ~5.9MM SF of Conference, Convention, and Trade Show Space on the Las Vegas Strip\n\n(3)\n\n(4)\n\n(4)\n\n(4)\n\n(4)\n\n(4)\n\n(4)\n\nMGM Grand",
+          "cited": true
+        },
+        {
+          "company": "VICI Properties",
+          "doc_type": "presentation",
+          "page_number": 5,
+          "as_of_date": "2026-03-01",
+          "filename": "VICI-Investor-Presentation-Mar-26_.pdf",
+          "snippet": "## VICI'S INVESTMENT HIGHLIGHTS\n\nVICI Properties Inc. (NYSE: VICI) is a triple net lease REIT that owns one of the largest high-quality portfolios of market-leading gaming, hospitality, wellness, entertainment and leisure destinations\n\n## D",
+          "cited": false
+        },
+        {
+          "company": "VICI Properties",
+          "doc_type": "presentation",
+          "page_number": 32,
+          "as_of_date": "2026-03-01",
+          "filename": "VICI-Investor-Presentation-Mar-26_.pdf",
+          "snippet": "## GAMING EMBEDDED GROWTH PIPELINE\n\nThe descriptions of the agreements herein are presented as a summary of such agreements, which are or may be subject to additional terms and conditions as described in the applicable agreements.\n\n## Put /",
+          "cited": false
+        }
+      ],
+      "timings": {
+        "route_ms": 2457,
+        "retrieve_ms": 6684,
+        "n_candidates": 92,
+        "rerank_ms": 2017,
+        "generate_ms": 1448,
+        "total_ms": 16710
+      },
+      "judge": {
+        "result": "Fail",
+        "score": 1,
+        "critical_facts_found": [],
+        "critical_facts_missing": [
+          "Caesars Palace",
+          "Venetian Resort Las Vegas",
+          "Mandalay Bay",
+          "Park MGM",
+          "New York-New York",
+          "Excalibur",
+          "Luxor"
+        ],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "weak",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The candidate answer correctly identifies that the document states VICI owns 10 trophy assets and mentions MGM Grand, but it fails to synthesize information from other pages within the same document to list the other trophy assets."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.3333333333333333,
+        "context_recall": 0.125
+      }
+    },
+    {
+      "id": "Q18",
+      "group": "D",
+      "group_name": "Chart, table, and map parsing",
+      "question": "What share of Realty Income's annualized base rent comes from each U.S. region vs Europe?",
+      "diagnoses": "Spatial-layout parsing of map-embedded data. Page 15 of Realty Income's deck shows seven U.S. regions and the U.K./Europe with each region's property count and ABR percentage placed at a geographic position on a world map. Text extraction yields a jumbled sequence (\"PACIFIC NORTHWEST 235 1.6% MIDWEST 4,002 20.3% NORTHEAST 1,036 9.2%...\") where adjacency between region label and its numbers is broken. Tests whether the parser preserves spatial groupings.",
+      "answer": "As of December 31, 2025, approximately 19% of Realty Income’s total annualized base rent is derived from Europe [2]. The remaining share of annualized base rent is attributed to the U.S. [2].\n\nThe provided documents do not contain information regarding the specific share of Realty Income's annualized base rent for individual U.S. regions.\n\n***\n\n*Note: Sources [3], [4], [5], [6], and [7] pertain to Digital Realty and do not contain information regarding Realty Income.*",
+      "intent": "lookup",
+      "cited_numbers": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "conflicts": [
+        {
+          "company": "Digital Realty",
+          "as_of_dates": [
+            "2025-09-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 7,
+      "sources": [
+        {
+          "company": "Realty Income",
+          "doc_type": "presentation",
+          "page_number": 10,
+          "as_of_date": "2026-02-01",
+          "filename": "Realty Incom q4-2025-investor-presentation.pdf",
+          "snippet": "## Highly Diversified Portfolio Across Clients, Industries, and Geographies\n\n## CLIENT DIVERSIFICATION - TOP 20 CLIENTS\n\n1.5%\n\n1.5%\n\n1.4%\n\n1.4%\n\n1.1%\n\n1.1%\n\n1.1%\n\n1.0%\n\n1.0%\n\n1.0%\n\nDenotes IG-\n\nRated Client (2)\n\n(3)\n\n7-Eleven\n\nDollar Genera",
+          "cited": false
+        },
+        {
+          "company": "Realty Income",
+          "doc_type": "presentation",
+          "page_number": 31,
+          "as_of_date": "2026-02-01",
+          "filename": "Realty Incom q4-2025-investor-presentation.pdf",
+          "snippet": "## Europe: A Fast-Growing, High-Quality Platform Opportunity\n\n## CONTINUED OPPORTUNITY IN THE REGION GIVEN A LARGER TOTAL ADDRESSABLE MARKET RELATIVE TO THE U.S., A FRAGMENTED COMPETITIVE LANDSCAPE, AND ATTRACTIVE RISK-ADJUSTED RETURNS\n\npro",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 5,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## Offering a Global Data Center Platform\n\nCapacity in World's Major Metros to Meet Growing Customer Demand\n\n## Global Capacity\n\n~2.9 GW\n\nTotal In-Place IT Capacity\n\n52%\n\n29%\n\n10%\n\n5%\n\n5%\n\nNorth America\n\nEurope\n\nAPAC\n\nLatin America\n\nGeograp",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 5,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## Offering a Global Data Center Platform\n\nCapacity in World's Major Metros to Meet Growing Customer Demand\n\n## Global Capacity\n\n~3 GW\n\nIn-Place IT Capacity\n\n52%\n\n29%\n\n10%\n\n5%\n\n5%\n\nNorth America\n\nEurope\n\nAPAC\n\nLatin America\n\nGeographically ",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 24,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## Multi-Year Backlog Enhances Visibility\n\n- Backlog Represents >20% of In-place Annualized Rent\n\n- 85% of Backlog Expected to Commence through 2026\n\n*2) Historical backlog adjusted for asset sales and purchases, joint venture and fund cont",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 22,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## Multi-Year Backlog\n\nEnhances Visibility\n\n- Backlog Represents 20% of in-place Annualized Rent\n\n- Record Total Backlog of $1.4Bn\n\n*3) Amounts shown represent GAAP annualized base rent from leases signed, but not yet commenced, based on es",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 18,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## Strong Demand Environment\n\n- Record $96M Bookings in 0-1MW + IX Category\n\n- $400M Total Bookings at 100% Share in 4Q\n\n## HISTORICAL BOOKINGS\n\nANNUALIZED GAAP BASE RENT\n\n$ in millions\n\n0-1MW\n\nInterconnection\n\nTotal Bookings at DLR Share\n\n",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 9686,
+        "retrieve_ms": 6697,
+        "n_candidates": 128,
+        "rerank_ms": 2219,
+        "generate_ms": 1150,
+        "total_ms": 24450
+      },
+      "judge": {
+        "result": "Fail",
+        "score": 0,
+        "critical_facts_found": [],
+        "critical_facts_missing": [
+          "Pacific Northwest: 1.6%",
+          "Midwest: 20.3%",
+          "Northeast: 9.2%",
+          "Mountain: 3.0%",
+          "Southwest: 10.0%",
+          "Southeast: 20.0%",
+          "Mid-Atlantic: 16.0%",
+          "Europe: 19.9%"
+        ],
+        "incorrect_or_unsupported_claims": [
+          "As of December 31, 2025, approximately 19% of Realty Income’s total annualized base rent is derived from Europe [2].",
+          "The provided documents do not contain information regarding the specific share of Realty Income's annualized base rent for individual U.S. regions."
+        ],
+        "citation_quality": "wrong",
+        "likely_failure_stage": "retrieval",
+        "one_line_note": "The answer incorrectly states that the documents do not contain the information, and the provided European percentage is not from the correct source. The relevant source (page 15) was not retrieved."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 0.7,
+        "context_precision": 0.2857142857142857,
+        "context_recall": 0.375
+      }
+    },
+    {
+      "id": "Q19",
+      "group": "D",
+      "group_name": "Chart, table, and map parsing",
+      "question": "Which markets does EastGroup operate in, ranked by importance?",
+      "diagnoses": "Multi-page synthesis with honest limitation reporting. Page 6 of EGP's deck is a U.S. map with city-level dots whose sizes encode property count — fully unreadable from text. Page 8 has the state-level breakdown by ABR (Texas 35%, Florida 25%, California 15%, Arizona 8%, North Carolina 5%, Other 12%). Tests whether the system retrieves both pages, returns the quantitative state-level data from page 8, and honestly notes that page 6's city-level granularity is not extractable from text.",
+      "answer": "I don't have enough information in the provided documents to rank the markets EastGroup operates in by importance.\n\nThe provided sources state that EastGroup Properties, Inc. focuses on high-growth markets throughout the United States, with an emphasis on the states of Florida, Texas, Arizona, California, and North Carolina [1]. While the documents mention specific locations such as Atlanta, GA [2] and Miami, FL [3] in the context of development and value-add projects, they do not provide a ranking or specific metrics to determine the relative importance of these markets.",
+      "intent": "lookup",
+      "cited_numbers": [
+        1,
+        2,
+        3
+      ],
+      "conflicts": [
+        {
+          "company": "Public Storage",
+          "as_of_dates": [
+            "2026-03-01",
+            "2026-03-16"
+          ]
+        },
+        {
+          "company": "BXP",
+          "as_of_dates": [
+            "2025-06-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 8,
+      "sources": [
+        {
+          "company": "EastGroup Properties, Inc.",
+          "doc_type": "roadshow",
+          "page_number": 3,
+          "as_of_date": "2026-02-01",
+          "filename": "EGP_2026_February_Roadshow_3.1_(Resize).pdf",
+          "snippet": "## Company Profile\n\nEastGroup  Properties,  Inc.  (NYSE:  EGP),  a  member  of  the  S&P  Mid-Cap  400  and  Russell  2000  Indexes,  is  a  selfadministered equity real estate investment trust focused on the development, acquisition and op",
+          "cited": true
+        },
+        {
+          "company": "EastGroup Properties, Inc.",
+          "doc_type": "roadshow",
+          "page_number": 24,
+          "as_of_date": "2026-02-01",
+          "filename": "EGP_2026_February_Roadshow_3.1_(Resize).pdf",
+          "snippet": "## Value-Add\n\nIn Markets Where EastGroup Already Has a Presence\n\n## Benefits:\n\n- In-fill locations\n\n- Higher return than market value for calculated leasing risk\n\n- Creates long term value for shareholders\n\nBroadmoor Commerce Park Atlanta, ",
+          "cited": true
+        },
+        {
+          "company": "EastGroup Properties, Inc.",
+          "doc_type": "roadshow",
+          "page_number": 18,
+          "as_of_date": "2026-02-01",
+          "filename": "EGP_2026_February_Roadshow_3.1_(Resize).pdf",
+          "snippet": "## Targeted Development\n\nDevelopment in Markets Where EastGroup Already Has a Presence\n\n## Benefits:\n\n- We Build Park Settings\n\n- Creates Sense of Place\n\n- Properties Designed to EGP Specifications for Functionality and Sustainability\n\n- In",
+          "cited": true
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 3,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## Strategic Rationale -A Win-Win for all stakeholders\n\nSource: Company filings\n\n3\n\n| Category Leading Scale & Brand     | • Further advances leading owned + operated self-storage platform • Unifies multiple brands under the #1 recognized n",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 9,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## BXP IS DIVERSIFIED ACROSS U.S. MARKETS\n\nWith the right assets and markets, BXP's portfolio aligns with where corporate demand is going\n\n## BXP's Share of Net Operating Income (NOI) 1\n\n*1. Excluding termination income. See Appendix.*\n\nBos",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 17,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## REMOTE WORK: IMPACT\n\nPremier Assets Outperform the Broader Market 1\n\n## Average Direct Vacancy Rate for Five Selected CBD Markets (%)\n\n*Direct Vacancy Rate (Excluding Sublease Availability)*\n\n-\n\n5.00\n\n10.00\n\n15.00\n\n20.00\n\n25.00\n\nQ1 2018\n",
+          "cited": false
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 14,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## Sustainability and Awards\n\n## Public Storage strives to remain among the highest rated on both Sustainability and Human Capital\n\n## Sustainability Snapshot\n\n- Top 7% Globally\n\n- Highest Rated U.S. Self-Storage REIT\n\n- Highest Rated U.S. ",
+          "cited": false
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 13,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## A Growth-Oriented Balance Sheet\n\nAccretive external growth to be funded with debt capacity, significant retained cash flow, and other capital sources\n\nA2 / A\n\nCredit\n\nrating\n\n(Moody's /\n\nS&P)\n\n.\n\n$1.8B\n\nnear-term\n\navailable\n\nliquidity 2\n",
+          "cited": false
+        }
+      ],
+      "timings": {
+        "route_ms": 9730,
+        "retrieve_ms": 6610,
+        "n_candidates": 152,
+        "rerank_ms": 2008,
+        "generate_ms": 958,
+        "total_ms": 28387
+      },
+      "judge": {
+        "result": "Fail",
+        "score": 1,
+        "critical_facts_found": [],
+        "critical_facts_missing": [
+          "Texas 35%",
+          "Florida 25%",
+          "California 15%",
+          "Arizona 8%",
+          "North Carolina 5%",
+          "Other 12%"
+        ],
+        "incorrect_or_unsupported_claims": [
+          "I don't have enough information in the provided documents to rank the markets EastGroup operates in by importance."
+        ],
+        "citation_quality": "weak",
+        "likely_failure_stage": "retrieval",
+        "one_line_note": "The system failed to retrieve the crucial page 8 which contains the market ranking by ABR. It incorrectly states it doesn't have enough information."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.125,
+        "context_recall": 0.42857142857142855
+      }
+    },
+    {
+      "id": "Q20",
+      "group": "E",
+      "group_name": "Ingestion quality",
+      "question": "What is EastGroup's strategy for property selection?",
+      "diagnoses": "Content-density filtering during ingestion. ~30 of EGP's 40 pages are property photos with one-line captions (\"Mesa Gateway / Phoenix, AZ / 5\"). The substantive strategy content lives on roughly pages 3, 6, 9, 11. Tests whether the ingestion pipeline either (a) filters out low-content pages, (b) weights chunk relevance by length/density so empty caption chunks don't outrank substantive ones, or (c) uses vision to extract more information from the photo pages. Naive chunkers create ~30 tiny chunks of \"Property Name / City, State\" that pollute retrieval.",
+      "answer": "EastGroup’s strategy for property selection and growth is centered on the following criteria:\n\n*   **Market Focus:** The company targets high-growth markets within the United States, with a specific emphasis on Florida, Texas, Arizona, California, and North Carolina [1].\n*   **Location and Supply:** The strategy relies on owning premier distribution facilities that are generally clustered near major transportation features and located in supply-constrained submarkets [1].\n*   **Property Characteristics:** EastGroup seeks to provide functional, flexible, and quality business distribution space, primarily catering to location-sensitive customers requiring 20,000 to 100,000 square feet [1].\n*   **Development Strategy:** The company prioritizes development in markets where it already has a presence, utilizing park settings to create a \"sense of place\" and designing properties to specific standards for functionality and sustainability [3].\n*   **Sustainability:** Property selection and development incorporate sustainable design features, such as energy-efficient systems and eco-friendly building envelopes (e.g., LED lighting, insulated ceilings/walls, and reflective roofing) [2].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1,
+        3,
+        2
+      ],
+      "conflicts": [],
+      "n_sources": 3,
+      "sources": [
+        {
+          "company": "EastGroup Properties, Inc.",
+          "doc_type": "roadshow",
+          "page_number": 3,
+          "as_of_date": "2026-02-01",
+          "filename": "EGP_2026_February_Roadshow_3.1_(Resize).pdf",
+          "snippet": "## Company Profile\n\nEastGroup  Properties,  Inc.  (NYSE:  EGP),  a  member  of  the  S&P  Mid-Cap  400  and  Russell  2000  Indexes,  is  a  selfadministered equity real estate investment trust focused on the development, acquisition and op",
+          "cited": true
+        },
+        {
+          "company": "EastGroup Properties, Inc.",
+          "doc_type": "roadshow",
+          "page_number": 37,
+          "as_of_date": "2026-02-01",
+          "filename": "EGP_2026_February_Roadshow_3.1_(Resize).pdf",
+          "snippet": "## Environmental Stewardship\n\nEastGroup  places  heavy  focus  on  incorporating  sustainable  design  features  in  our  development  properties,  allowing  us  to integrate  energy  efficient  systems  and  eco-friendly  design  into  our",
+          "cited": true
+        },
+        {
+          "company": "EastGroup Properties, Inc.",
+          "doc_type": "roadshow",
+          "page_number": 18,
+          "as_of_date": "2026-02-01",
+          "filename": "EGP_2026_February_Roadshow_3.1_(Resize).pdf",
+          "snippet": "## Targeted Development\n\nDevelopment in Markets Where EastGroup Already Has a Presence\n\n## Benefits:\n\n- We Build Park Settings\n\n- Creates Sense of Place\n\n- Properties Designed to EGP Specifications for Functionality and Sustainability\n\n- In",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 7390,
+        "retrieve_ms": 5206,
+        "n_candidates": 101,
+        "rerank_ms": 2128,
+        "generate_ms": 1613,
+        "total_ms": 20847
+      },
+      "judge": {
+        "result": "Pass",
+        "score": 5,
+        "critical_facts_found": [
+          "Market Focus: high-growth markets (Florida, Texas, Arizona, California, North Carolina)",
+          "Location and Supply: premier distribution facilities, clustered near major transportation, supply-constrained submarkets",
+          "Property Characteristics: functional, flexible, quality business distribution space, 20,000 to 100,000 square feet, location-sensitive customers",
+          "Development Strategy: development in markets where EastGroup already has a presence, park settings, creates a 'sense of place', designed to EGP specifications for functionality and sustainability",
+          "Sustainability: incorporates sustainable design features (energy-efficient systems, eco-friendly building envelopes, LED lighting, insulated ceilings/walls, reflective roofing)"
+        ],
+        "critical_facts_missing": [],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "good",
+        "likely_failure_stage": "none",
+        "one_line_note": "The answer accurately synthesizes EastGroup's property selection strategy from the provided sources, covering market focus, location, property characteristics, development, and sustainability. Citations are correct."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.6666666666666666,
+        "context_recall": 0.5
+      }
+    },
+    {
+      "id": "Q21",
+      "group": "E",
+      "group_name": "Ingestion quality",
+      "question": "What is BXP's key strategy?",
+      "diagnoses": "Structured-list preservation during chunking + multi-doc synthesis. Investor Day page 50 (\"SUMMARY: Current Strengths / Action Plan\") is a 2-column slide with six bullet points on each side — a structured list. Tests: (a) chunker keeps the full SUMMARY slide together rather than fragmenting the bullets across multiple chunks, (b) the system retrieves the Investor Day strategic frame and the Q4 deck execution-status updates that reinforce it.",
+      "answer": "BXP’s strategy is described through its strategic emphasis and summary of core pillars as follows:\n\n**Strategic Emphasis (as of 2025-06-30)**\nBXP’s strategic emphasis is categorized into operations and financial goals [1]:\n*   **Operations:** Elevating asset quality, focusing on central business districts (CBD) over suburban locations, and remaining focused on gateway markets [1].\n*   **Financial:** Growing FFO per share, increasing scale, deleveraging, and pursuing select office and residential development [1].\n\n**Summary of Core Pillars (as of 2025-12-31)**\nAs of the Q4 2025 summary, BXP defines its strategy through three core pillars [3]:\n*   **Quality:** Maintaining a premier workplace portfolio across six markets with strong employment growth and a modern portfolio of new or recently refreshed assets [3].\n*   **Agility:** Utilizing a diverse client base across sectors and geographies to minimize risk, maintaining strong liquidity with access to capital, and leveraging a history of developing, acquiring, and divesting assets to maximize shareholder value [3].\n*   **Durability:** Focusing on strong historical FFO growth, a development pipeline that is 61% pre-leased, and a durable cash flow stream with a weighted-average lease term of 7.6 years [3].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1,
+        3
+      ],
+      "conflicts": [
+        {
+          "company": "BXP",
+          "as_of_dates": [
+            "2025-06-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 3,
+      "sources": [
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 35,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## CURRENT STRATEGIC EMPHASIS\n\n## Operations\n\nElevate Asset Quality Further\n\nMore CBD, Less Suburban\n\nRemain Focused on Gateway Markets\n\nFinancial\n\nGrow FFO / Share\n\nIncrease Scale\n\nDeleverage\n\nSelect Office and More Residential Development",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 5,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## AGENDA\n\n## BXP Strategy\n\nKey Market Trends & Impacts\n\nCurrent Strategic Emphasis\n\nAction Plan\n\n5",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 38,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## BXP SUMMARY\n\n## Quality\n\n## Agility\n\nDurability\n\n- Premier workplace portfolio across six markets with strong employment growth over time\n\n- Proven, trusted corporate leadership team and regional management\n\n- Modern portfolio of new or ",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 7171,
+        "retrieve_ms": 5185,
+        "n_candidates": 93,
+        "rerank_ms": 2876,
+        "generate_ms": 8177,
+        "total_ms": 27970
+      },
+      "judge": {
+        "result": "Partial",
+        "score": 3,
+        "critical_facts_found": [
+          "Strategic Emphasis (Operations: Elevate Asset Quality, More CBD, Less Suburban, Remain Focused on Gateway Markets)",
+          "Strategic Emphasis (Financial: Grow FFO / Share, Increase Scale, Deleverage, Select Office and More Residential Development)",
+          "Summary of Core Pillars (Quality: Premier workplace portfolio, Modern portfolio)",
+          "Summary of Core Pillars (Agility: Diverse client base, Strong liquidity, History of developing, acquiring, and divesting)",
+          "Summary of Core Pillars (Durability: Strong historical FFO growth, Development pipeline 61% pre-leased, Durable cash flow stream with 7.6 years weighted-average lease term)"
+        ],
+        "critical_facts_missing": [
+          "Action Plan (as described in the Investor Day presentation, page 50)"
+        ],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "good",
+        "likely_failure_stage": "retrieval",
+        "one_line_note": "The answer correctly identifies and synthesizes the 'Strategic Emphasis' and 'Summary of Core Pillars' from the provided sources. However, it misses the 'Action Plan' which is a key part of BXP's strategy as outlined in the Investor Day presentation (page 50, which was not retrieved)."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.6666666666666666,
+        "context_recall": 0.16666666666666666
+      }
+    },
+    {
+      "id": "Q22",
+      "group": "F",
+      "group_name": "Cross-document synthesis",
+      "question": "How is AI affecting demand across the different real estate sectors represented in these documents?",
+      "diagnoses": "Cross-document retrieval diversification (MMR or per-doc quota). Digital Realty has 100+ AI mentions and ~6 slides explicitly on AI demand; BXP has a different AI angle (favoring CBD gateway markets); PSA frames AI as an internal efficiency tool, not a demand driver; VICI / Realty Income / Simon / EGP have minimal AI content. Without retrieval diversification, top-K retrieval will be ~8 chunks all from DLR and the answer will be \"AI drives 2.7x data center growth\" — missing the sector comparison.",
+      "answer": "Based on the provided documents, AI is affecting real estate demand in the following ways:\n\n### **Office Sector (BXP Portfolio)**\nBXP reports that leasing trends do not reflect an AI-driven contraction in their office portfolio [1].\n*   **Demand and Leasing:** BXP observes no evidence of shorter lease commitments, delayed decision-making, or widespread footprint reductions due to AI [1]. Leasing momentum remains strong, with 5.6 million square feet leased in 2025 [1].\n*   **AI-Specific Leasing:** AI and technology firms are actively leasing space in New York, Boston, and San Francisco [1]. In San Francisco specifically, AI-related tech is a primary driver of demand [2, 6].\n    *   **AI Leasing Activity (San Francisco):**\n        *   1.09 million square feet per BXP as of 2025-06-30 [6].\n        *   Net new demand of +2,261,540 square feet per BXP as of 2025-12-31 [2].\n    *   **AI Total Footprint (San Francisco):**\n        *   6.00 million square feet per BXP as of 2025-06-30 [6].\n        *   7.7 million square feet per BXP as of 2025-12-31 [2].\n\n### **Data Center Sector (Digital Realty)**\nAI is a significant driver of demand for data centers, categorized by two distinct types of requirements [3, 4]:\n*   **Training Demand:** Characterized as \"location agnostic\" and \"fungible,\" this demand requires large, contiguous capacity [3, 4].\n*   **Inference Demand:** Characterized as the \"consumption point,\" this demand is \"location sensitive\" and requires smaller, liquid, and contiguous capacity [3, 4].\n*   **Impact:** AI is influencing how the company engages with customers, builds data centers, and develops product offerings [3, 4].\n\n### **Other Sectors**\n*   **Industrial, Retail, and Gaming:** Realty Income identifies U.S. Data Centers (~$0.5T), U.S. Industrial (~$2.0T), U.S. Freestanding Retail (~$2.6T), and U.S. Gaming (~$0.4T) as part of its $14 trillion total addressable market [5]. While the document notes that ~15% of their industrial clients operate in sectors that may be impacted by broader economic trends, it does not explicitly detail AI's specific impact on demand for these sectors [5].\n\n### **Labor Market Context**\nBXP cites McKinsey Global Institute data suggesting that while some occupations are \"hit and declining,\" there are \"resilient and growing\" occupations in fields that require higher education and skills, which may influence future office space requirements [7].",
+      "intent": "enumerate",
+      "cited_numbers": [
+        1,
+        2,
+        6,
+        3,
+        4,
+        5,
+        7
+      ],
+      "conflicts": [
+        {
+          "company": "BXP",
+          "as_of_dates": [
+            "2025-06-30",
+            "2025-12-31"
+          ]
+        },
+        {
+          "company": "Digital Realty",
+          "as_of_dates": [
+            "2025-09-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 7,
+      "sources": [
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 13,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## THE AI ERA VS. WHAT WE'RE SEEING IN OUR PORTFOLIO\n\nHeadlines Suggest Disruption. Portfolio Trends Reflect Ongoing Demand.\n\n## WHAT WE ARE SEEING IN OUR PORTFOLIO\n\n## Leasing Activity Remains Strong and Durable\n\nLeasing momentum across ou",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 16,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## AI DRIVES HIGHS IN DEMAND IN SAN FRANCISCO 1\n\n*Total SF of Active and Pending Requirements by Tenant Industry*\n\nAI or AI-related Tech\n\nTech (excluding AI)\n\nFinancial\n\nEducation\n\nGovernment/Non-Profit\n\nLegal\n\nCoworking Operators\n\nOther/Un",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 13,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## AI ContinuesTo Accelerate and Evolve\n\nPlatformDIGITAL® is Positioned to Benefit From Both Training and Inference\n\n1\n\nStrong and Growing Demand\n\n2\n\n3\n\nLocation Agnostic, for Now\n\nTime to Market & Capacity are Key\n\n13\n\n## AI\n\nTraining Dema",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 14,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## AI ContinuesTo Accelerate and Evolve\n\nPlatformDIGITAL is Positioned to Benefit From Both Training and Inference\n\n1\n\nStrong and Growing Demand\n\n2\n\n3\n\nLocation Agnostic, for Now\n\nTime to Market & Capacity are Key\n\n14\n\n## AI\n\nTraining Deman",
+          "cited": true
+        },
+        {
+          "company": "Realty Income",
+          "doc_type": "presentation",
+          "page_number": 8,
+          "as_of_date": "2026-02-01",
+          "filename": "Realty Incom q4-2025-investor-presentation.pdf",
+          "snippet": "## $14T Total Addressable Market Across Core and HighGrowth Sectors\n\n## Expanding Total Addressable Market (By Realty Income's Entry Date)\n\n2010\n\n2022\n\n2019\n\n2023\n\n2025\n\nU.S. Industrial\n\n~$2.0T\n\nEurope\n\n~$8.5T\n\nU.S. Data\n\nCenters (3)\n\n~$0.5",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 24,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## ARTIFICAL INTELLIGENCE: IMPACT\n\nA.I. Companies Drive Leasing Demand in San Francisco\n\n6.0\n\n5.0\n\n4.0\n\n3.0\n\n2.0\n\n1.0\n\n0.0\n\n30%\n\n25%\n\n20%\n\n15%\n\n10%\n\n5%\n\n0%\n\n2018\n\n2019\n\n2020\n\n2021\n\n2022\n\n2023\n\n2024                    2025\n\nLeasingActivity\n\n",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 25,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## ARTIFICAL INTELLIGENCE: IMPACT\n\nJob Creation in Fields that Require More Education and Skills\n\n30%\n\n30%\n\n23%\n\n12%\n\n11%\n\n11%\n\n10%\n\n9%\n\n7%\n\n7%\n\n7%\n\n3%\n\n2%\n\n-1%\n\n-2%\n\n-13%\n\n-18%\n\n-30%\n\n-20%\n\n-10%\n\n0%\n\n10%\n\n20%\n\n30%\n\n40%\n\nNet Change in Labor",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 10662,
+        "retrieve_ms": 8633,
+        "n_candidates": 344,
+        "rerank_ms": 1920,
+        "generate_ms": 9262,
+        "total_ms": 38397
+      },
+      "judge": {
+        "result": "Pass",
+        "score": 5,
+        "critical_facts_found": [
+          "BXP reports no AI-driven contraction in their office portfolio, with strong leasing momentum.",
+          "AI and technology firms are actively leasing office space in New York, Boston, and San Francisco, with AI-related tech being a primary driver in San Francisco.",
+          "Digital Realty sees AI as a significant driver for data centers, categorizing demand into 'training' (location agnostic, large capacity) and 'inference' (location sensitive, smaller capacity).",
+          "Realty Income's document mentions industrial, retail, and gaming sectors within its total addressable market but does not explicitly detail AI's specific impact on demand for these sectors.",
+          "BXP cites McKinsey data on job creation in fields requiring higher education and skills, which may influence future office space requirements."
+        ],
+        "critical_facts_missing": [],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "good",
+        "likely_failure_stage": "none",
+        "one_line_note": "The answer successfully synthesizes information across different real estate sectors regarding AI's impact on demand, including specific details for office and data center sectors, and notes the lack of explicit information for others."
+      },
+      "ragas": {
+        "faithfulness": 0.9444444444444444,
+        "answer_relevance": 1.0,
+        "context_precision": 0.5714285714285714,
+        "context_recall": 0.4
+      }
+    },
+    {
+      "id": "Q23",
+      "group": "F",
+      "group_name": "Cross-document synthesis",
+      "question": "VICI and Realty Income both mention gaming exposure. How are their gaming portfolios different?",
+      "diagnoses": "Cross-document same-sector framing with balanced retrieval. VICI is ~100% gaming/experiential (54 gaming + 39 experiential properties; Caesars and MGM are 39% and 34% of rent). Realty Income treats gaming as one diversification segment among many (retail / industrial / gaming / data centers / credit). Tests whether the system balances retrieval across the two documents.",
+      "answer": "VICI Properties and Realty Income differ significantly in the scale, structure, and nature of their gaming portfolios:\n\n**Portfolio Scale and Composition**\n*   **VICI Properties:** VICI operates a large-scale gaming portfolio consisting of 54 gaming properties across 15 U.S. states and one Canadian province [2]. Their gaming assets include approximately 4.2 million square feet of gaming space, 66,000 gaming units, and extensive supporting infrastructure, including ~60,300 hotel rooms and ~6.7 million square feet of meeting and convention space [3].\n*   **Realty Income:** Realty Income’s gaming exposure is characterized by strategic, large-scale investments rather than a broad portfolio of gaming-specific real estate. Their gaming activity includes specific marquee investments, such as the $1.7 billion acquisition of the Encore Boston Harbor Resort and Casino (December 2022), a $950 million Bellagio investment, and an $800 million CityCenter Las Vegas investment [4, 6].\n\n**Strategic Approach**\n*   **VICI Properties:** VICI is a dedicated triple-net lease REIT focused on \"non-commodity experiential assets,\" with gaming serving as a core component of their business model [1]. They emphasize the high barriers to entry created by the gaming regulatory environment and the complexity of their assets [1].\n*   **Realty Income:** Realty Income views gaming as one of several \"core and high-growth sectors\" within a broader $14 trillion total addressable market [5]. Their entry into the gaming vertical was marked by the 2022 Encore Boston Harbor acquisition, utilizing a sale-leaseback strategy to partner with operators [6].\n\n**Geographic and Revenue Distribution (VICI only)**\n*   VICI provides a specific breakdown of their gaming rent: 51% is derived from regional properties, 48% from Las Vegas, and 1% from international locations [2]. \n\nNot disclosed in the provided Realty Income materials is a comparable geographic or revenue-based breakdown of their gaming portfolio.",
+      "intent": "compare",
+      "cited_numbers": [
+        2,
+        3,
+        4,
+        6,
+        1,
+        5
+      ],
+      "conflicts": [],
+      "n_sources": 6,
+      "sources": [
+        {
+          "company": "VICI Properties",
+          "doc_type": "presentation",
+          "page_number": 5,
+          "as_of_date": "2026-03-01",
+          "filename": "VICI-Investor-Presentation-Mar-26_.pdf",
+          "snippet": "## VICI'S INVESTMENT HIGHLIGHTS\n\nVICI Properties Inc. (NYSE: VICI) is a triple net lease REIT that owns one of the largest high-quality portfolios of market-leading gaming, hospitality, wellness, entertainment and leisure destinations\n\n## D",
+          "cited": true
+        },
+        {
+          "company": "VICI Properties",
+          "doc_type": "presentation",
+          "page_number": 11,
+          "as_of_date": "2026-03-01",
+          "filename": "VICI-Investor-Presentation-Mar-26_.pdf",
+          "snippet": "## VICI HAS A HIGHQUALITY PORTFOLIO OF REAL ESTATE…\n\n54 Gaming and 39 Other Experiential Properties Spanning 26 States and 1 Canadian Province\n\nEmpire City\n\nHard Rock\n\nCincinnati\n\nCaesars\n\nSouthern\n\nIndiana\n\nCentury Casino\n\nCaruthersville\n\n",
+          "cited": true
+        },
+        {
+          "company": "VICI Properties",
+          "doc_type": "presentation",
+          "page_number": 12,
+          "as_of_date": "2026-03-01",
+          "filename": "VICI-Investor-Presentation-Mar-26_.pdf",
+          "snippet": "## …DIVERSIFIED WITH MULTIPLE REVENUE STREAMS…\n\nVICI is the Largest Owner of Hotel Room Real Estate (1)  and Privately-Owned Meeting, Convention & Event Space (2)  in America\n\n~60,300 Hotel Rooms\n\n500+ F&B Outlets\n\n*(1) By key. (2) By squar",
+          "cited": true
+        },
+        {
+          "company": "Realty Income",
+          "doc_type": "presentation",
+          "page_number": 24,
+          "as_of_date": "2026-02-01",
+          "filename": "Realty Incom q4-2025-investor-presentation.pdf",
+          "snippet": "## Scale Drives Proprietary Deal Flow, Large Transactions, and Strategic Partnerships\n\n~$69B\n\nof total capital deployed from 2019-2025\n\n~\n\n$75B\n\naverage annual sourcing volume from 2019-2025\n\n## Marquee Deals Realty Income Has Executed (201",
+          "cited": true
+        },
+        {
+          "company": "Realty Income",
+          "doc_type": "presentation",
+          "page_number": 8,
+          "as_of_date": "2026-02-01",
+          "filename": "Realty Incom q4-2025-investor-presentation.pdf",
+          "snippet": "## $14T Total Addressable Market Across Core and HighGrowth Sectors\n\n## Expanding Total Addressable Market (By Realty Income's Entry Date)\n\n2010\n\n2022\n\n2019\n\n2023\n\n2025\n\nU.S. Industrial\n\n~$2.0T\n\nEurope\n\n~$8.5T\n\nU.S. Data\n\nCenters (3)\n\n~$0.5",
+          "cited": true
+        },
+        {
+          "company": "Realty Income",
+          "doc_type": "presentation",
+          "page_number": 32,
+          "as_of_date": "2026-02-01",
+          "filename": "Realty Incom q4-2025-investor-presentation.pdf",
+          "snippet": "$8.5 T\n\nAsset Value\n\n$5.5 T\n\nAsset Value\n\n## Aggregate Net Lease TAM (Total Addressable Market) (2)\n\n39%\n\n*(1) Total sale-leaseback transactions includes volume from FY 2020 through FY 2025. Represented as a percentage of total investments ",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 8483,
+        "retrieve_ms": 6285,
+        "n_candidates": 186,
+        "rerank_ms": 1970,
+        "generate_ms": 7392,
+        "total_ms": 28233
+      },
+      "judge": {
+        "result": "Pass",
+        "score": 5,
+        "critical_facts_found": [
+          "VICI has 54 gaming properties across 15 U.S. states and one Canadian province.",
+          "VICI's gaming assets include 4.2 million sq ft of gaming space, 66,000 gaming units, 60,300 hotel rooms, and 6.7 million sq ft of meeting space.",
+          "VICI is a dedicated triple-net lease REIT focused on experiential assets, with gaming as a core component.",
+          "VICI's gaming rent breakdown: 51% regional, 48% Las Vegas, 1% international.",
+          "Realty Income's gaming exposure includes marquee investments like Encore Boston Harbor ($1.7B), Bellagio ($950M), and CityCenter Las Vegas ($800M).",
+          "Realty Income views gaming as one of several core and high-growth sectors within a broader market.",
+          "Realty Income entered the gaming vertical in 2022 with the Encore Boston Harbor acquisition, using a sale-leaseback strategy."
+        ],
+        "critical_facts_missing": [],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "good",
+        "likely_failure_stage": "none",
+        "one_line_note": "The answer accurately differentiates the gaming portfolios of VICI and Realty Income based on scale, strategic approach, and specific investments, with good citation."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.8333333333333334,
+        "context_recall": 0.7
+      }
+    },
+    {
+      "id": "Q24",
+      "group": "F",
+      "group_name": "Cross-document synthesis",
+      "question": "What is the 2026 FFO outlook for each REIT in the corpus?",
+      "diagnoses": "Per-company disciplined retrieval + honest negatives. BXP discloses $6.96 midpoint 2026 FFO/share. PSA standalone gives 2026 ranges (revenue -2.2% to 0.0%, NOI -3.9% to -0.5%); PSA merger pro-forma gives FFO-neutral 2026 → $0.10-0.20 accretive 2027 → $0.35-0.50 at stabilization. VICI, DLR, Realty Income, EGP, Simon do not provide 2026 FFO/share guidance in their decks. Tests whether the system retrieves separately per company, distinguishes standalone from pro-forma for PSA, and honestly reports \"not disclosed\" for the others rather than guessing.",
+      "answer": "The 2026 FFO outlook for each REIT in the provided corpus is as follows:\n\n*   **Public Storage:** The company projects Core FFO per share to be between $16.35 and $17.00, with a midpoint of $16.68 [1].\n*   **BXP:** \n    *   As of June 30, 2025, the company provided \"FFO Considerations\" for 2026, including specific per-share impacts from a dividend reset (+$0.04), burnoff of capitalized interest (-$0.07), bond refinancing (+$0.02 to +$0.14), and asset sale dilution (-$0.04 to -$0.09) [2, 5].\n    *   As of December 31, 2025, the company stated that its guidance for full-year 2026 diluted FFO per common share is \"set forth and reconciled below\" in its materials, but the specific numerical guidance range is not provided in the source text [3].\n*   **Digital Realty:** The company does not provide a specific numerical outlook for 2026 Core FFO per share, noting that it is unable to provide a meaningful or accurate calculation or estimation of reconciling items for non-GAAP forward-looking measures [6].",
+      "intent": "enumerate",
+      "cited_numbers": [
+        1,
+        2,
+        5,
+        3,
+        6
+      ],
+      "conflicts": [
+        {
+          "company": "BXP",
+          "as_of_dates": [
+            "2025-06-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 6,
+      "sources": [
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 15,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## 2026 Outlook:  Key Metrics\n\nSource: Company filings\n\n15 15\n\n|                           | 2026             | 2026     |\n|---------------------------|------------------|----------|\n| Metric                    | Outlook Range    | Midpoint",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 131,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## IN CONCLUSION:  2026 FFO CONSIDERATIONS\n\n2026 Occupancy:  End 2026 at ~89% | Average for year 87.25% - 88%\n\nDevelopment NOI growth primarily from 290 Binney Street and 1050 Winter Street\n\nDividend reset projected to add $0.04 per share\n\n",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 46,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "RECONCILIATIONS OF NON-GAAP FINANCIAL MEASURES AND OTHER FINANCIAL INFORMATION (UNAUDITED)\n\n## Projected EPS and FFO\n\nBXP's guidance for first quarter and full year 2026 for diluted earnings per common share attributable to BXP, Inc. (EPS) ",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 28,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## SHAREHOLDER PREFERENCES\n\n## Grow FFO per Share\n\n*1. Market FFO Growth is calculated by indexing the yearly FFO per share of All Equity REITS, dividing the current year by the prior year to produce the percentage shown in the chart above.",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 129,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## PROJECTED IMPACT OF ASSET SALES THROUGH 2026 1\n\n- The disposition data is based on estimates.  There can be no assurance that the dispositions will occur at the assumed prices, on the schedules contemplated or at all. See Appendix for in",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 25,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## 2026 Financial Guidance\n\n## Improving Core Growth\n\nNote: Dollars in millions except Core FFO per Share. The Company does not provide a reconciliation for non-GAAP estimates on a forward-looking basis, as it is unable to provide a meaning",
+          "cited": true
+        }
+      ],
+      "timings": {
+        "route_ms": 20949,
+        "retrieve_ms": 9506,
+        "n_candidates": 312,
+        "rerank_ms": 1853,
+        "generate_ms": 1900,
+        "total_ms": 37254
+      },
+      "judge": {
+        "result": "Fail",
+        "score": 1,
+        "critical_facts_found": [],
+        "critical_facts_missing": [
+          "BXP 2026 FFO/share midpoint of $6.96",
+          "PSA 2026 revenue outlook (-2.2% to 0.0%)",
+          "PSA 2026 NOI outlook (-3.9% to -0.5%)",
+          "PSA merger pro-forma FFO-neutral 2026",
+          "VICI 2026 FFO outlook (not disclosed)",
+          "Realty Income 2026 FFO outlook (not disclosed)",
+          "EGP 2026 FFO outlook (not disclosed)",
+          "Simon 2026 FFO outlook (not disclosed)"
+        ],
+        "incorrect_or_unsupported_claims": [
+          "Public Storage: The company projects Core FFO per share to be between $16.35 and $17.00, with a midpoint of $16.68 [1]."
+        ],
+        "citation_quality": "weak",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The candidate hallucinates PSA's 2026 FFO/share and misses BXP's actual FFO/share guidance. It also fails to report 'not disclosed' for most companies."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 0.7,
+        "context_precision": 0.16666666666666666,
+        "context_recall": 0.18
+      }
+    }
+  ]
+}

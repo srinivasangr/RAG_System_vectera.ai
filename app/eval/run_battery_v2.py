@@ -67,6 +67,8 @@ def main(argv=None) -> int:
     p.add_argument("--gen-model", default="gemini-3.1-flash-lite")
     p.add_argument("--judge-provider", default="gemini")
     p.add_argument("--judge-model", default="gemini-2.5-flash")
+    p.add_argument("--out-prefix", default="v2_battery",
+                   help="output filename prefix in baselines/ (e.g. v2_battery_ab25)")
     args = p.parse_args(argv)
 
     cases = yaml.safe_load(BATTERY_FILE.read_text(encoding="utf-8"))
@@ -137,7 +139,7 @@ def main(argv=None) -> int:
                  ("faithfulness", "answer_relevance", "context_precision", "context_recall")}
 
     # --- JSON ---
-    (BASELINE_DIR / "v2_battery_results.json").write_text(json.dumps({
+    (BASELINE_DIR / f"{args.out_prefix}_results.json").write_text(json.dumps({
         "system": "v2", "gen_model": args.gen_model, "judge_model": args.judge_model,
         "started_utc": started.isoformat() + "Z", "n": n,
         "counts": dict(counts), "ragas_avg": ragas_avg, "results": results,
@@ -189,7 +191,7 @@ def main(argv=None) -> int:
         if j.get("critical_facts_missing"):
             lines.append(f"**Missing:** {'; '.join(map(str, j['critical_facts_missing']))}")
         lines += ["", "---", ""]
-    (BASELINE_DIR / "v2_battery_scored.md").write_text("\n".join(lines), encoding="utf-8")
+    (BASELINE_DIR / f"{args.out_prefix}_scored.md").write_text("\n".join(lines), encoding="utf-8")
 
     print("\n=== v2 RESULT ===")
     print(f"  Pass {counts.get('Pass',0)} / Partial {counts.get('Partial',0)} / Fail {counts.get('Fail',0)}  (n={n})")
