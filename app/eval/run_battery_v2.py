@@ -37,6 +37,7 @@ except Exception:  # noqa: BLE001
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from eval.judge import judge_answer
+from eval import ragas_metrics as rag
 from rag_system.generation.generate_v2 import answer_query
 from rag_system.llm_providers import get_llm
 
@@ -98,6 +99,15 @@ def main(argv=None) -> int:
                 answer=a.answer, citations=a.cited_numbers,
                 retrieved_summary=_sources_summary(sources), llm=judge_llm,
             )
+            # RAGAS-style quantitative metrics (faithfulness / answer-relevance /
+            # context precision / context recall vs the expected behavior).
+            ragas = {
+                "faithfulness": rag.judge_faithfulness(q, a.answer, a.sources),
+                "answer_relevance": rag.judge_answer_relevance(q, a.answer),
+                "context_precision": rag.judge_context_precision(q, a.sources),
+                "context_recall": rag.judge_context_recall_ref(
+                    q, case.get("diagnoses", ""), a.sources),
+            }
             results.append({
                 "id": qid, "group": case["group"], "group_name": case["group_name"],
                 "question": q, "diagnoses": case.get("diagnoses", "").strip(),
@@ -105,7 +115,7 @@ def main(argv=None) -> int:
                 "cited_numbers": a.cited_numbers, "conflicts": a.conflicts,
                 "n_sources": len(a.sources), "sources": sources,
                 "timings": {k: v for k, v in a.timings.items() if k != "provider_chain"},
-                "judge": j,
+                "judge": j, "ragas": ragas,
             })
             print(f"     -> {j['result']} (score {j.get('score')}) "
                   f"[{j.get('likely_failure_stage')}] {j.get('one_line_note','')[:80]}\n")
@@ -119,11 +129,18 @@ def main(argv=None) -> int:
     counts = Counter(r["judge"]["result"] for r in results)
     n = len(results)
 
+    def _avg(key):
+        vals = [r["ragas"][key] for r in results
+                if r.get("ragas") and r["ragas"].get(key) is not None]
+        return round(sum(vals) / len(vals), 3) if vals else None
+    ragas_avg = {k: _avg(k) for k in
+                 ("faithfulness", "answer_relevance", "context_precision", "context_recall")}
+
     # --- JSON ---
     (BASELINE_DIR / "v2_battery_results.json").write_text(json.dumps({
         "system": "v2", "gen_model": args.gen_model, "judge_model": args.judge_model,
         "started_utc": started.isoformat() + "Z", "n": n,
-        "counts": dict(counts), "results": results,
+        "counts": dict(counts), "ragas_avg": ragas_avg, "results": results,
     }, indent=2, ensure_ascii=False), encoding="utf-8")
 
     # --- Scored markdown ---
@@ -139,7 +156,13 @@ def main(argv=None) -> int:
         f"| **Partial** | {counts.get('Partial',0)}/{n} | {V1_BASELINE['Partial']}/24 |",
         f"| **Fail** | {counts.get('Fail',0)}/{n} | {V1_BASELINE['Fail']}/24 |", "",
         f"**v1 → v2 delta: Pass {V1_BASELINE['Pass']} → {counts.get('Pass',0)}**", "",
-        "---", "",
+        "## RAGAS-style metrics (judge: gemini-2.5-flash, mean over 24 Qs)", "",
+        "| Metric | v2 |", "|---|---|",
+        f"| Faithfulness (answer grounded in sources) | {ragas_avg['faithfulness']} |",
+        f"| Answer relevance | {ragas_avg['answer_relevance']} |",
+        f"| Context precision (retrieved chunks that are relevant) | {ragas_avg['context_precision']} |",
+        f"| Context recall (expected facts present in retrieval) | {ragas_avg['context_recall']} |",
+        "", "---", "",
     ]
     cur_group = None
     for r in results:
