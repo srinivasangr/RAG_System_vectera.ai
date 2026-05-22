@@ -86,3 +86,18 @@ Documents/
 
 # Anything starting with an underscore in scripts/ is an ad-hoc helper
 app/scripts/_*.py
+
+# ===========================================================================
+# Local-only docs (kept on disk, not in the repo): design drafts, the
+# concepts primer, v1 diagram tooling. The canonical docs are
+# docs/architecture.md and docs/comparison_v1_vs_v2.md.
+# ===========================================================================
+docs/architecture_v2.md
+docs/architecture_v2_final.md
+docs/v2_concepts_primer.md
+docs/v2_concepts_primer.pdf
+docs/design_notes.md
+docs/streamlit_cloud_setup.md
+docs/architecture.drawio
+docs/_build_diagram.py
+docs/assets/
