@@ -91,6 +91,24 @@ def _dense(cur, query_vec, filters, k) -> list[tuple[str, str]]:
     return [(r[0], r[1]) for r in cur.fetchall()]
 
 
+def _dense_chunks(cur, query_vec, filters, k) -> list[tuple[str, str]]:
+    """cosine over chunks.embedding — covers ALL chunk types (prose, table,
+    chart, figure). Propositions only exist for prose, so this is what makes
+    chart/table/figure slides semantically findable (closes the index hole)."""
+    where, params = _filter_sql(filters, "c")
+    where_sql = f"WHERE {where}" if where else ""
+    sql = f"""
+        SELECT c.chunk_id, c.text,
+               VECTOR_COSINE_SIMILARITY(c.embedding, {_vec_literal(query_vec)}::VECTOR(FLOAT,768)) AS s
+        FROM chunks c
+        {where_sql}
+        ORDER BY s DESC
+        LIMIT {int(k)}
+    """
+    cur.execute(sql, params)
+    return [(r[0], r[1]) for r in cur.fetchall()]
+
+
 def _lexical(cur, tokens, filters, k) -> list[tuple[str, str]]:
     if not tokens:
         return []
@@ -182,7 +200,8 @@ def multi_source_retrieve(
         for sq in sub_queries:
             qv = embedder.embed_one(sq)
             toks = _tokens(sq)
-            _rrf_add(cands, _dense(cur, qv, filters, candidate_k), source="dense")
+            _rrf_add(cands, _dense(cur, qv, filters, candidate_k), source="dense")          # propositions
+            _rrf_add(cands, _dense_chunks(cur, qv, filters, candidate_k), source="dense_chunk")  # all chunks
             _rrf_add(cands, _lexical(cur, toks, filters, candidate_k), source="lexical")
             if use_tables:
                 _rrf_add(cands, _structured(cur, toks, filters, candidate_k), source="structured")
