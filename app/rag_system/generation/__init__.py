@@ -1,6 +1,5 @@
-"""High-level query API for the UI and eval harness."""
+"""Answer generation: conflict-aware, cited responses over retrieved sources."""
 
-from rag_system.generation.citations import Citation
-from rag_system.generation.service import Answer, query
+from rag_system.generation.generate_v2 import AnswerV2, answer_query
 
-__all__ = ["query", "Answer", "Citation"]
+__all__ = ["answer_query", "AnswerV2"]
