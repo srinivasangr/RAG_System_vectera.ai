@@ -32,6 +32,85 @@ from the first iteration.
 
 ---
 
+## Architecture diagrams
+
+These render on GitHub. An editable source is at
+[`docs/architecture.drawio`](docs/architecture.drawio) (open in
+[draw.io](https://app.diagrams.net) to export SVG/PNG).
+
+### 1. High-level
+
+```mermaid
+flowchart LR
+    user([User]) --> ui[FastAPI app + UI]
+    ui -->|upload PDF| ing[Ingestion pipeline]
+    ui -->|ask question| qry[Query pipeline]
+
+    ing --> sf[(Snowflake<br/>multi-vector index)]
+    qry --> sf
+
+    ing -.identify · vision · propositions.-> gem[Gemini]
+    qry  -.route · generate.-> gem
+    ing  -.embed.-> bge[Local BGE embeddings]
+    qry  -.embed.-> bge
+    qry  -.rerank.-> ce[Cross-encoder]
+
+    classDef store fill:#1c2230,stroke:#4c8bf5,color:#e6edf3;
+    classDef ext fill:#161b22,stroke:#3fb950,color:#e6edf3;
+    class sf store; class gem,bge,ce ext;
+```
+
+### 2. Functional flow
+
+```mermaid
+flowchart TB
+    subgraph OFFLINE [Offline · ingestion]
+        direction LR
+        p1[parse<br/>Docling] --> p2[identify<br/>LLM] --> p3[chunk<br/>parents + footnotes] --> p4[page-vision<br/>tables/charts/figures] --> p5[propositions<br/>atomic facts] --> p6[embed<br/>BGE] --> p7[store]
+    end
+
+    subgraph ONLINE [Online · query]
+        direction LR
+        q1[route<br/>LLM] --> q2[multi-source retrieve<br/>dense + lexical + structured] --> q3[RRF fusion] --> q4[rerank<br/>cross-encoder] --> q5[diversify<br/>per-doc quota] --> q6[version-pair<br/>expansion] --> q7[small-to-big] --> q8[conflict<br/>detect] --> q9[generate<br/>cited, grounded]
+    end
+
+    OFFLINE --> DB[(Snowflake)]
+    DB --> ONLINE
+```
+
+### 3. Architecture at a glance
+
+```mermaid
+flowchart TB
+    subgraph IF [Interface]
+        UI[FastAPI · streaming UI<br/>Ask · Ingest · History · Trace]
+    end
+    subgraph PIPE [Pipelines]
+        ING[ingest: parse · metadata · chunk · vision · propositions]
+        RET[retrieve: router · multi-source · rerank · diversify · expand · conflict]
+        GEN[generate: conflict-aware, cited]
+    end
+    subgraph PROV [Providers · swappable behind one interface]
+        GEM[Gemini<br/>LLM · vision]
+        BGE[BGE-base<br/>embeddings]
+        CE[MiniLM<br/>cross-encoder]
+    end
+    subgraph DATA [Storage · Snowflake]
+        T1[documents · parent_chunks · chunks]
+        T2[propositions · table_rows · chart_records]
+        T3[page_images · document_files · query_log]
+    end
+
+    UI --> ING --> DATA
+    UI --> RET --> GEN --> UI
+    RET --> DATA
+    ING --> GEM & BGE
+    RET --> GEM & BGE & CE
+    GEN --> GEM
+```
+
+---
+
 ## Tech stack
 
 | Layer | Choice |
