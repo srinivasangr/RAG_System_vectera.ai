@@ -1,0 +1,536 @@
+{
+  "system": "v2",
+  "gen_model": "gemini-2.5-flash",
+  "judge_model": "gemini-2.5-flash",
+  "started_utc": "2026-05-22T05:04:13.479607Z",
+  "n": 5,
+  "counts": {
+    "Fail": 5
+  },
+  "ragas_avg": {
+    "faithfulness": 0.75,
+    "answer_relevance": 0.84,
+    "context_precision": 0.389,
+    "context_recall": 0.47
+  },
+  "results": [
+    {
+      "id": "Q2",
+      "group": "A",
+      "group_name": "Version & temporal awareness",
+      "question": "What is BXP's projected 2026 occupancy?",
+      "diagnoses": "Document-type recency hierarchy. Investor Day (Jun 30, 2025) gave a range of 87.25-88%; Q4 deck (Mar 2026) tightened to a point estimate of 88%. Tests whether the system recognizes that a Q4 quarterly update supersedes a mid-year Investor Day for forward guidance, and either presents both with chronology or prefers the more recent disclosure.",
+      "answer": "BXP's projected 2026 occupancy is:\n*   Expected to average 87.25% to 88% for the year, per a BXP presentation as of 2025-06-30 [1, 4].\n*   Projected to be approximately 89% at the end of 2026, per a BXP presentation as of 2025-06-30 [1].",
+      "intent": "lookup",
+      "cited_numbers": [
+        1,
+        4
+      ],
+      "conflicts": [
+        {
+          "company": "BXP",
+          "as_of_dates": [
+            "2025-06-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 6,
+      "sources": [
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 131,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## IN CONCLUSION:  2026 FFO CONSIDERATIONS\n\n2026 Occupancy:  End 2026 at ~89% | Average for year 87.25% - 88%\n\nDevelopment NOI growth primarily from 290 Binney Street and 1050 Winter Street\n\nDividend reset projected to add $0.04 per share\n\n",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 77,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## PRO FORMA SAME STORE LEASED PERCENTAGE 1\n\nLeased Percentage Today 89.1%\n\n+ 3.7%\n\nLeased Percentage 2027 2 92.8%\n\nAssuming the Historical Spread of 210bps Between Leased and Occupied Percentages, BXP's 2027 Occupancy Percentage Would Be A",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 25,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## 290 BINNEY STREET\n\n## Delivers in 2026 and Will Provide Significant Cash Flow\n\n## Joint Venture:\n\n- 55% BXP | 45% NBIM Joint Venture\n\n- NBIM's investment reduced BXP's share of development cost by $534 million and reduces BXP's corporate",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 126,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## PRO FORMA IN-SERVICE 1  OCCUPANCY\n\n2026 Pro Forma Occupancy Expected to Average 87.25% to 88%\n\n86.4%\n\n89.0%\n\n86.0%\n\n86.5%\n\n87.0%\n\n87.5%\n\n88.0%\n\n88.5%\n\n89.0%\n\n89.5%\n\n90.0%\n\nQ2 2025\n\nQ3 2025\n\nQ4 2025\n\nQ1 2026\n\nQ2 2026\n\nQ3 2026\n\nQ4 2026\n\nOc",
+          "cited": true
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 46,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "RECONCILIATIONS OF NON-GAAP FINANCIAL MEASURES AND OTHER FINANCIAL INFORMATION (UNAUDITED)\n\n## Projected EPS and FFO\n\nBXP's guidance for first quarter and full year 2026 for diluted earnings per common share attributable to BXP, Inc. (EPS) ",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 26,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## $3.6 BILLION ACTIVE DEVELOPMENT PIPELINE 1\n\n*1. Represents BXP's Share of Estimated Total Investment, including income (loss) and interest carry on debt and equity investmen t during development. Excludes 651 Gateway (50% ownership), whi",
+          "cited": false
+        }
+      ],
+      "timings": {
+        "route_ms": 6089,
+        "retrieve_ms": 9480,
+        "n_candidates": 101,
+        "rerank_ms": 5944,
+        "generate_ms": 4097,
+        "total_ms": 31456
+      },
+      "judge": {
+        "result": "Fail",
+        "score": 2,
+        "critical_facts_found": [
+          {
+            "fact": "2026 Occupancy: Average for year 87.25% - 88%",
+            "source": "[1, 4]"
+          },
+          {
+            "fact": "2026 Occupancy: End 2026 at ~89%",
+            "source": "[1]"
+          }
+        ],
+        "critical_facts_missing": [],
+        "incorrect_or_unsupported_claims": [
+          "The candidate answer completely missed the most recent information from the Q4 2025 Investor Presentation (dated 2025-12-31, published 2026-03-20) which provides a more updated and precise projection for 2026 occupancy. This document is present in the retrieved sources but not used."
+        ],
+        "citation_quality": "weak",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The answer only uses information from the older June 2025 presentation and completely misses the more recent Q4 2025 Investor Presentation (dated Dec 2025, published Mar 2026) which would supersede the older guidance."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.3333333333333333,
+        "context_recall": 0.3333333333333333
+      }
+    },
+    {
+      "id": "Q3",
+      "group": "A",
+      "group_name": "Version & temporal awareness",
+      "question": "What's changed in BXP's strategy between the 2025 Investor Day and the Q4 2025 update?",
+      "diagnoses": "Same-company, two-document temporal-delta reasoning. Strategic framework is unchanged but execution has advanced: dividend reset announced in Investor Day, reported as completed in Q4; occupancy guidance tightened; 2026 FFO guidance ($6.96 midpoint) became public; CBD share rose 90.5% to 90.8% of NOI. Tests cross-document synthesis from the same issuer, ordered chronologically, with the ability to distinguish \"stable framework\" from \"evolved disclosure.\"",
+      "answer": "Between the 2025 Investor Day (as of 2025-06-30) and the Q4 2025 update (as of 2025-12-31), BXP's strategy shows both continuity and",
+      "intent": "lookup",
+      "cited_numbers": [],
+      "conflicts": [
+        {
+          "company": "BXP",
+          "as_of_dates": [
+            "2025-06-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 4,
+      "sources": [
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 105,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## FUNDING STRATEGY - SUMMARY\n\n*1. Represents BXP's Share.  See slide 10 for more details.*\n\n*2. Represents anticipated cash to be retained through 2027 as a result of the dividend reset.  See slide 12 for more details.*\n\n*3. Amount include",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 124,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## BXP FUNDING STRATEGY\n\nFully Fund Development Plan\n\nImproves Leverage\n\nAccretive to Earnings\n\nCreates Capacity for Future Investment Opportunities\n\nPositioned for Future Dividend Growth\n\nBXP 2025 Investor Day\n\n124",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 91,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## AGENDA\n\nDevelopment:  The DNA of BXP\n\nFunding Strategy\n\nBalance Sheet Strategy\n\nPath to 2026:  FFO Considerations\n\nBXP 2025 Investor Day\n\n91",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 19,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "## CONSISTENT PORTFOLIO RECYCLING\n\nStrategically Capitalizing on Growth Regions and Sectors\n\nDispositions: 15.9M SF\n\n1 ,\n\n$9.1B\n\n2\n\n(2010-2025)\n\nDevelopment Deliveries: 18.6M SF\n\n1 ,\n\n$10.6B\n\n3\n\n(2010-2025)\n\nAcquisitions: 16.2M SF\n\n1 ,\n\n$7.",
+          "cited": false
+        }
+      ],
+      "timings": {
+        "route_ms": 4703,
+        "retrieve_ms": 8688,
+        "n_candidates": 91,
+        "rerank_ms": 2325,
+        "generate_ms": 7467,
+        "total_ms": 28012
+      },
+      "judge": {
+        "result": "Fail",
+        "score": 0,
+        "critical_facts_found": [],
+        "critical_facts_missing": [],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "missing",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The candidate answer is incomplete and does not provide any information about the changes in BXP's strategy."
+      },
+      "ragas": {
+        "faithfulness": 0.0,
+        "answer_relevance": 0.5,
+        "context_precision": 0.75,
+        "context_recall": 0.1111111111111111
+      }
+    },
+    {
+      "id": "Q8",
+      "group": "B",
+      "group_name": "Intra-document inconsistency & footnote awareness",
+      "question": "How has Digital Realty's customer credit-quality profile changed between the Dec 2025 and Mar 2026 presentations?",
+      "diagnoses": "Methodology change buried in footnotes. Both decks report ~50-51% investment-grade customers, but footnote 2 reveals the basis changed: Dec 2025 uses top-10 customers / $4.5B revenue; Mar 2026 uses top-100 customers / $6.1B revenue (10x expansion of customer sample, 36% revenue growth). Tests whether the system surfaces that \"the number changed from X to Y\" is meaningless because \"the way it was measured also changed.\"",
+      "answer": "I don't have enough information in the provided documents to answer that. The sources contain information about Digital Realty's customer credit-quality profile as of December 31, 2025, but no information for Digital Realty as of March 2026.\n\nAs of December 31, 2025, Digital Realty's customer credit-quality profile included approximately 51% Investment Grade customers [2]. This percentage is based on the credit ratings of Digital Realty's top 100 customers against an annualized recurring",
+      "intent": "lookup",
+      "cited_numbers": [
+        2
+      ],
+      "conflicts": [
+        {
+          "company": "Digital Realty",
+          "as_of_dates": [
+            "2025-09-30",
+            "2025-12-31"
+          ]
+        },
+        {
+          "company": "Public Storage",
+          "as_of_dates": [
+            "2026-03-01",
+            "2026-03-16"
+          ]
+        }
+      ],
+      "n_sources": 9,
+      "sources": [
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 24,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## Multi-Year Backlog Enhances Visibility\n\n- Backlog Represents >20% of In-place Annualized Rent\n\n- 85% of Backlog Expected to Commence through 2026\n\n*2) Historical backlog adjusted for asset sales and purchases, joint venture and fund cont",
+          "cited": false
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 23,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## High-Quality, Diversified Customer Base\n\n- Top customers have a presence in 36 different locations, on average\n\nCustomer Type (% by ARR) (1)\n\nCloud\n\n41%\n\nFinancial\n\n12%\n\nNetwork\n\n15%\n\nIT\n\nEnterprise\n\n9%\n\nContent\n\n14%\n\n10%\n\nInvestment\n\nGr",
+          "cited": true
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 25,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## High-Quality, Diversified Customer Base\n\n- Top customers have a presence in 41 different locations, on average\n\nCustomer Type (% by ARR) (1)\n\nCloud\n\n41%\n\nFinancial\n\n12%\n\nNetwork\n\n15%\n\nIT\n\nEnterprise\n\n9%\n\nContent\n\n14%\n\n10%\n\n## High-Qualit",
+          "cited": false
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 19,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## Enabling the Meeting Place\n\n## Record 0-1MW + Interconnection Bookings\n\n## 4Q25 Results\n\n155 new logos\n\n## $96M\n\nRecord total 4Q bookings from 0-1 MW + Interconnection\n\n55%\n\nof total 4Q bookings from 0-1 MW + Interconnection\n\n## 2025 Ful",
+          "cited": false
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 12,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## AI Platform Readiness\n\nAs power-dense workloads increase, Digital Realty's modular designs support advanced cooling solutions\n\n## Increase in Average Rack Density (1)\n\n70% Average rack density rises nearly in one year.\n\n-  Average rack ",
+          "cited": false
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 17,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## Important Information\n\nFORWARD-LOOKING STATEMENTS: This presentation contains forward-looking statements within the meaning of the Private Securities Litigation Reform Act of 1995. Forward-looking statements include statements relating t",
+          "cited": false
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 30,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## Appendix Forward-Looking Statements\n\nThis information in this presentation contains forward-looking statements within the meaning of the federal securities laws, which are based on current expectations, forecasts and assumptions that inv",
+          "cited": false
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 9,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## Strong Track Record of Value Creation\n\n## Case Study: Margin Expansion on Recent Large Acquisitons 1\n\n72.6%\n\n81.8%\n\nPre-Acquisition\n\nTwo-Year Operated\n\neZ Storage\n\n63.5%\n\n73.1%\n\nPre-Acquisition\n\nTwo-Year Operated\n\nSimply Self Storage\n\n50",
+          "cited": false
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 1,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## Merger Presentation\n\nMarch 16, 2026\n\n1",
+          "cited": false
+        }
+      ],
+      "timings": {
+        "route_ms": 5089,
+        "retrieve_ms": 5937,
+        "n_candidates": 106,
+        "rerank_ms": 2050,
+        "generate_ms": 7173,
+        "total_ms": 28444
+      },
+      "judge": {
+        "result": "Fail",
+        "score": 1,
+        "critical_facts_found": [],
+        "critical_facts_missing": [
+          "The candidate answer states that there is no information for Digital Realty as of March 2026, which is incorrect. Source [2] and [4] are from March 2026.",
+          "The candidate answer fails to identify the change in methodology for calculating investment-grade customers between the two presentations.",
+          "The December 2025 presentation (Source [3]) states 'approximately 51% Investment Grade customers' based on 'top 10 customers representing $4.5 billion of annualized recurring revenue'.",
+          "The March 2026 presentation (Source [2]) states 'approximately 50% Investment Grade customers' based on 'top 100 customers representing $6.1 billion of annualized recurring revenue'."
+        ],
+        "incorrect_or_unsupported_claims": [
+          "\"I don't have enough information in the provided documents to answer that. The sources contain information about Digital Realty's customer credit-quality profile as of December 31, 2025, but no information for Digital Realty as of March 2026.\""
+        ],
+        "citation_quality": "weak",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The candidate incorrectly claims lack of information for March 2026 and completely misses the core diagnostic of the question: the change in methodology for calculating customer credit quality."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 1.0,
+        "context_precision": 0.2222222222222222,
+        "context_recall": 0.8888888888888888
+      }
+    },
+    {
+      "id": "Q14",
+      "group": "C",
+      "group_name": "Document-type and scope distinctions",
+      "question": "What is the average occupancy difference between Public Storage and NSA's same-store portfolios?",
+      "diagnoses": "Table parsing with column-to-entity preservation. PSA Merger Presentation page 4 has a 3-column comparison table: PSA 92.0% / NSA 84.3% / Pro Forma 90.3% — a 7.7 pp gap. Pure pdftotext produces a chunk like \"92.0% 84.3% 90.3%\" with no column labels attached. Tests whether the parser is table-aware (Docling, etc.) and produces structured rows where each value carries its column identity.",
+      "answer": "I can only answer questions grounded in the loaded documents, and that doesn't appear to be answerable from them. Try asking about the companies, metrics, or topics covered in the corpus.",
+      "intent": "refuse",
+      "cited_numbers": [],
+      "conflicts": [],
+      "n_sources": 0,
+      "sources": [],
+      "timings": {
+        "total_ms": 5083
+      },
+      "judge": {
+        "result": "Fail",
+        "score": 0,
+        "critical_facts_found": [],
+        "critical_facts_missing": [
+          "Public Storage occupancy: 92.0%",
+          "NSA occupancy: 84.3%",
+          "Difference: 7.7 percentage points"
+        ],
+        "incorrect_or_unsupported_claims": [],
+        "citation_quality": "missing",
+        "likely_failure_stage": "retrieval",
+        "one_line_note": "The system failed to retrieve any relevant documents, leading to an inability to answer the question."
+      },
+      "ragas": {
+        "faithfulness": null,
+        "answer_relevance": 1.0,
+        "context_precision": null,
+        "context_recall": null
+      }
+    },
+    {
+      "id": "Q24",
+      "group": "F",
+      "group_name": "Cross-document synthesis",
+      "question": "What is the 2026 FFO outlook for each REIT in the corpus?",
+      "diagnoses": "Per-company disciplined retrieval + honest negatives. BXP discloses $6.96 midpoint 2026 FFO/share. PSA standalone gives 2026 ranges (revenue -2.2% to 0.0%, NOI -3.9% to -0.5%); PSA merger pro-forma gives FFO-neutral 2026 → $0.10-0.20 accretive 2027 → $0.35-0.50 at stabilization. VICI, DLR, Realty Income, EGP, Simon do not provide 2026 FFO/share guidance in their decks. Tests whether the system retrieves separately per company, distinguishes standalone from pro-forma for PSA, and honestly reports \"not disclosed\" for the others rather than guessing.",
+      "answer": "Here is the 2026 FFO outlook for each REIT:\n\n*   **Public Storage:**\n    *   The 2026 outlook for Core FFO per share is $16.35 to $17.00, with a midpoint of $1",
+      "intent": "lookup",
+      "cited_numbers": [],
+      "conflicts": [
+        {
+          "company": "Public Storage",
+          "as_of_dates": [
+            "2026-03-01",
+            "2026-03-16"
+          ]
+        },
+        {
+          "company": "BXP",
+          "as_of_dates": [
+            "2025-06-30",
+            "2025-12-31"
+          ]
+        },
+        {
+          "company": "Digital Realty",
+          "as_of_dates": [
+            "2025-09-30",
+            "2025-12-31"
+          ]
+        }
+      ],
+      "n_sources": 8,
+      "sources": [
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 15,
+          "as_of_date": "2026-03-01",
+          "filename": "PSA Company-Update-Mar-26-vF.pdf",
+          "snippet": "## 2026 Outlook:  Key Metrics\n\nSource: Company filings\n\n15 15\n\n|                           | 2026             | 2026     |\n|---------------------------|------------------|----------|\n| Metric                    | Outlook Range    | Midpoint",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 28,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## SHAREHOLDER PREFERENCES\n\n## Grow FFO per Share\n\n*1. Market FFO Growth is calculated by indexing the yearly FFO per share of All Equity REITS, dividing the current year by the prior year to produce the percentage shown in the chart above.",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 131,
+          "as_of_date": "2025-06-30",
+          "filename": "BXP Morning Session Deck web.pdf",
+          "snippet": "## IN CONCLUSION:  2026 FFO CONSIDERATIONS\n\n2026 Occupancy:  End 2026 at ~89% | Average for year 87.25% - 88%\n\nDevelopment NOI growth primarily from 290 Binney Street and 1050 Winter Street\n\nDividend reset projected to add $0.04 per share\n\n",
+          "cited": false
+        },
+        {
+          "company": "Public Storage",
+          "doc_type": "presentation",
+          "page_number": 8,
+          "as_of_date": "2026-03-16",
+          "filename": "PSA Merger-Presentation-vF.pdf",
+          "snippet": "## Substantial Synergies and Per Share Growth Potential\n\n+$60 - $65M\n\n+$15 - $20M\n\n+$25 - $30M\n\nIndustry-leading revenue generation, operating expense efficiency, and PS Next platform\n\nRevenue\n\nTenant Reinsurance\n\n$110 - $130M Total Public ",
+          "cited": false
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 30,
+          "as_of_date": "2025-12-31",
+          "filename": "Digital Realty_Investor Presentation March 2026.pdf",
+          "snippet": "## Reconciliation of Non-GAAP Items To Their Closest GAAP\n\n## Equivalent\n\n## Digital Realty Trust, Inc. and Subsidiaries\n\nReconciliation of Funds From Operations (FFO) to Core Funds From Operations (CFFO) (in thousands, except per share and",
+          "cited": false
+        },
+        {
+          "company": "BXP",
+          "doc_type": "presentation",
+          "page_number": 46,
+          "as_of_date": "2025-12-31",
+          "filename": "BXP Q4 2025 Investor Presentation with Appendix 3.20.2026.pdf",
+          "snippet": "RECONCILIATIONS OF NON-GAAP FINANCIAL MEASURES AND OTHER FINANCIAL INFORMATION (UNAUDITED)\n\n## Projected EPS and FFO\n\nBXP's guidance for first quarter and full year 2026 for diluted earnings per common share attributable to BXP, Inc. (EPS) ",
+          "cited": false
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 31,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## Reconciliation of Non-GAAP Items To Their Closest GAAP\n\n## Equivalent\n\n## Digital Realty Trust, Inc. and Subsidiaries\n\nReconciliation of Net Income Available to Common Stockholders to Funds From Operations (FFO) (in thousands, except per",
+          "cited": false
+        },
+        {
+          "company": "Digital Realty",
+          "doc_type": "presentation",
+          "page_number": 32,
+          "as_of_date": "2025-09-30",
+          "filename": "Digital Realty_Investor Presentation December 2025.pdf",
+          "snippet": "## Reconciliation of Non-GAAP Items To Their Closest GAAP\n\n## Equivalent\n\n## Digital Realty Trust, Inc. and Subsidiaries\n\nReconciliation of Funds From Operations (FFO) to Core Funds From Operations (CFFO) (in thousands, except per share and",
+          "cited": false
+        }
+      ],
+      "timings": {
+        "route_ms": 5049,
+        "retrieve_ms": 7349,
+        "n_candidates": 104,
+        "rerank_ms": 2682,
+        "generate_ms": 7112,
+        "total_ms": 31167
+      },
+      "judge": {
+        "result": "Fail",
+        "score": 1,
+        "critical_facts_found": [],
+        "critical_facts_missing": [
+          "BXP 2026 FFO/share guidance",
+          "PSA 2026 FFO/share guidance (standalone)",
+          "PSA 2026 FFO/share guidance (pro-forma)",
+          "VICI 2026 FFO/share guidance (not disclosed)",
+          "DLR 2026 FFO/share guidance (not disclosed)",
+          "Realty Income 2026 FFO/share guidance (not disclosed)",
+          "EGP 2026 FFO/share guidance (not disclosed)",
+          "Simon 2026 FFO/share guidance (not disclosed)"
+        ],
+        "incorrect_or_unsupported_claims": [
+          "Public Storage: The 2026 outlook for Core FFO per share is $16.35 to $17.00, with a midpoint of $1"
+        ],
+        "citation_quality": "missing",
+        "likely_failure_stage": "generation",
+        "one_line_note": "The answer hallucinates a FFO range for Public Storage and fails to provide any information for other REITs, including BXP which has 2026 FFO considerations."
+      },
+      "ragas": {
+        "faithfulness": 1.0,
+        "answer_relevance": 0.7,
+        "context_precision": 0.25,
+        "context_recall": 0.5454545454545454
+      }
+    }
+  ]
+}

@@ -50,6 +50,16 @@ class _OpenAICompatLLM(BaseLLMProvider):
             temperature=temperature,
             max_tokens=max_tokens,
         )
+        # Capture token usage for observability (best-effort).
+        try:
+            u = resp.usage
+            self.last_usage = {
+                "prompt_tokens": getattr(u, "prompt_tokens", None),
+                "completion_tokens": getattr(u, "completion_tokens", None),
+                "total_tokens": getattr(u, "total_tokens", None),
+            }
+        except Exception:  # noqa: BLE001
+            self.last_usage = {}
         return resp.choices[0].message.content or ""
 
 

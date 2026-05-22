@@ -1,227 +1,413 @@
-"""End-to-end ingestion: parse → vision → chunk → embed → upsert.
+"""End-to-end v3 ingestion — page-level vision, stored PDF + page images,
+file metadata, content dedup.
+
+Per document:
+  0 dedup (update-if-changed by sha256)
+  1 file + PDF metadata; store the raw PDF
+  2 parse (Docling: text + which pages are visual)
+  3 identify (LLM, text)
+  4 chunk prose (Docling) -> parents + prose children
+  5 page-vision (LLM, image) on VISUAL pages -> tables/charts/figures
+        + render & store each visual page image
+  6 propositions (LLM, text) from prose + visual descriptions
+  7 embed (local BGE): children + propositions + table_rows
+  8 store everything (one connection)
+  9 checkpoint complete
+
+Docling = text/layout (fast, local). Vision = all visual content (tables,
+charts, maps, logos) with descriptions. Domain-agnostic throughout.
 
 Usage:
-  python -m rag_system.ingest.pipeline                    # all PDFs
-  python -m rag_system.ingest.pipeline --limit 1          # first PDF only
-  python -m rag_system.ingest.pipeline --doc <basename>   # one PDF by name
-  python -m rag_system.ingest.pipeline --no-vision        # skip image descriptions
-  python -m rag_system.ingest.pipeline --dry-run          # parse+chunk, don't write to Snowflake
+  python -m rag_system.ingest.pipeline --doc <name>
+  python -m rag_system.ingest.pipeline --force --vision-model gemini-3.1-flash-lite
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
 import logging
+import os
+import re
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from rag_system.config import settings
 from rag_system.ingest.chunk import Chunk, chunk_page
-from rag_system.ingest.metadata import DocMeta, extract_metadata
-from rag_system.ingest.parse import ParsedDocument, parse_pdf
-from rag_system.ingest.vision_extract import describe_images
-from rag_system.llm_providers import get_embedder
-from rag_system.storage.db import get_connection
-from rag_system.storage.repository import (
-    delete_chunks_for_doc,
-    insert_chunks,
-    upsert_document,
+from rag_system.ingest.metadata import file_checksum
+from rag_system.ingest.metadata import extract_file_meta, extract_metadata
+from rag_system.ingest.parse import parse_pdf
+from rag_system.ingest.propositions import extract_propositions
+from rag_system.ingest.vision import (
+    DEFAULT_VISION_MODEL, extract_page_elements, render_page_png,
 )
+from rag_system.llm_providers import get_embedder, get_llm, get_vision
+from rag_system.storage import repository as repo
+from rag_system.storage import repository as repo3
+from rag_system.storage.db import get_connection
 
 log = logging.getLogger(__name__)
 
+_TABLE_MD = re.compile(r"\|[^\n]+\|\n\|[\s\-:|]+\|")
 
-def _build_chunks(
-    meta: DocMeta,
-    parsed: ParsedDocument,
-    *,
-    with_vision: bool,
-    vision_call_budget: int | None,
-    progress_cb=None,
-) -> list[Chunk]:
-    chunks: list[Chunk] = []
-    remaining_budget = vision_call_budget
 
-    # Run vision over ALL pages' images in one parallel pass (faster + lets us
-    # emit a single coherent vision progress stream). Then chunk per page.
-    all_images = []
-    for page in parsed.pages:
-        all_images.extend(page.images)
+def _first_pages_text(pdf_path: Path, parsed, n: int = 3) -> str:
+    txt = ""
+    try:
+        from pypdf import PdfReader
+        for pg in PdfReader(str(pdf_path)).pages[:n]:
+            txt += (pg.extract_text() or "") + "\n"
+    except Exception:  # noqa: BLE001
+        txt = ""
+    if len(txt.strip()) < 100:
+        txt = "\n\n".join(p.markdown for p in parsed.pages[:n])
+    return txt
 
-    descs_all: dict = {}
-    if with_vision and all_images:
-        descs_all = describe_images(
-            all_images,
-            max_calls=remaining_budget,
-            progress_cb=progress_cb,
-        )
 
-    for page in parsed.pages:
-        # Pull this page's chart descriptions out of the global map
-        page_descs = [
-            descs_all[(page.page_number, im.image_index)]
-            for im in page.images
-            if (page.page_number, im.image_index) in descs_all
-        ]
-        page_chunks = chunk_page(
-            doc_id=meta.doc_id,
-            page_number=page.page_number,
-            page_markdown=page.markdown,
-            chart_descriptions=page_descs,
-            company=meta.company,
-            doc_date=meta.doc_date,
-            version_label=meta.version_label,
-        )
-        chunks.extend(page_chunks)
+def _png_to_jpeg_thumb(png_bytes: bytes, *, max_w: int = 1000, quality: int = 72) -> tuple[bytes, int, int]:
+    """Downscale a page PNG to a compact JPEG thumbnail for storage.
 
-    return chunks
+    Vision still gets the full-res PNG; only the STORED provenance image is
+    shrunk (cuts ~5-10x size, so big decks don't bloat Snowflake / slow upsert).
+    """
+    import io
+    from PIL import Image
+    img = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+    if img.width > max_w:
+        h = int(img.height * max_w / img.width)
+        img = img.resize((max_w, h), Image.LANCZOS)
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=quality, optimize=True)
+    return buf.getvalue(), img.width, img.height
+
+
+def _page_is_visual(page) -> bool:
+    """Render+vision a page if it has pictures, a table, or little text."""
+    if page.images:
+        return True
+    md = page.markdown or ""
+    if _TABLE_MD.search(md):
+        return True
+    return len(md.strip()) < 300
 
 
 def ingest_one(
     pdf_path: Path,
     *,
     with_vision: bool = True,
-    vision_call_budget: int | None = None,
+    with_propositions: bool = True,
+    vision_model: str = DEFAULT_VISION_MODEL,
+    force: bool = False,
     dry_run: bool = False,
     progress_cb=None,
+    llm=None,
 ) -> dict:
-    """Ingest one PDF end-to-end.
-
-    progress_cb is called with (event_name: str, payload: dict) at key stages:
-      start, parse_start, parse_batch, parse_done, vision_start,
-      vision_progress, vision_done, chunk_done, embed_start, embed_progress,
-      embed_done, upsert_done, done, error.
-    """
     def _emit(ev, **kw):
         if progress_cb:
             try:
                 progress_cb(ev, kw)
             except Exception:
-                pass  # never let the UI callback break ingestion
+                pass
 
     t0 = time.perf_counter()
-    meta = extract_metadata(pdf_path)
-    _emit("start",
-          file=pdf_path.name, company=meta.company,
-          version=meta.version_label, doc_id=meta.doc_id)
-    log.info(
-        "ingest start: %s [%s, %s]",
-        pdf_path.name, meta.company, meta.version_label or "undated",
-    )
+    checksum = file_checksum(pdf_path)
 
-    try:
-        parsed = parse_pdf(pdf_path, progress_cb=progress_cb)
-    except Exception as e:
-        _emit("error", stage="parse", message=str(e))
-        raise
-    _emit("parse_done", pages=parsed.page_count,
-          images=sum(len(p.images) for p in parsed.pages))
-    log.info("  parsed: %d pages, %d images",
-             parsed.page_count, sum(len(p.images) for p in parsed.pages))
+    # 0. dedup — update-if-changed
+    if not force and not dry_run and repo.is_complete_by_checksum(checksum):
+        log.info("skip (unchanged, already complete): %s", pdf_path.name)
+        _emit("done", skipped=True, file=pdf_path.name)
+        return {"file": pdf_path.name, "skipped": True}
 
-    chunks = _build_chunks(
-        meta, parsed,
-        with_vision=with_vision,
-        vision_call_budget=vision_call_budget,
-        progress_cb=progress_cb,
-    )
-    by_type = {}
-    for c in chunks:
-        by_type[c.chunk_type] = by_type.get(c.chunk_type, 0) + 1
-    _emit("chunk_done", total=len(chunks), by_type=by_type)
-    log.info("  chunked: %d total %s", len(chunks), by_type)
+    llm = llm or get_llm()
+    vision = get_vision() if with_vision else None
+    _emit("start", file=pdf_path.name)
+
+    # 1. file metadata + raw PDF
+    file_meta = extract_file_meta(pdf_path)
+    pdf_bytes = pdf_path.read_bytes()
+    pdf_b64 = base64.b64encode(pdf_bytes).decode("ascii")
+
+    # 2. parse
+    parsed = parse_pdf(pdf_path, progress_cb=progress_cb)
+    first_pages = _first_pages_text(pdf_path, parsed, n=3)
+    _emit("parse_done", pages=parsed.page_count)
+
+    # 3. identify
+    meta = extract_metadata(pdf_path, first_pages_text=first_pages, llm=llm)
+    doc_id = meta.doc_id
+    stored_pdf_path = meta.source_path  # we overwrite with relative below
+    _emit("identify_done", doc_id=doc_id, company=meta.company,
+          doc_type=meta.doc_type, as_of=str(meta.as_of_date))
+    if not dry_run:
+        repo.mark_stage(doc_id, checksum, "parse", "done", f"{parsed.page_count} pages")
+
+    # 4. chunk prose (+ parents). Tables come from vision, so keep only prose children.
+    parents, children = [], []
+    parents_by_page = {}
+    for page in parsed.pages:
+        pc = chunk_page(
+            doc_id=doc_id, page_number=page.page_number, page_markdown=page.markdown,
+            company=meta.company, doc_type=meta.doc_type, doc_date=meta.doc_date,
+            as_of_date=meta.as_of_date, doc_family_id=meta.doc_family_id,
+            version_label=meta.version_label,
+        )
+        parents.append(pc.parent)
+        parents_by_page[page.page_number] = pc.parent
+        children.extend([c for c in pc.children if c.chunk_type == "prose"])
+    _emit("chunk_done", parents=len(parents), children=len(children))
+    if not dry_run:
+        repo.mark_stage(doc_id, checksum, "chunk", "done", f"{len(parents)}p/{len(children)}c")
+
+    # 5. page-vision on visual pages -> tables/charts/figures + page images
+    table_rows: list[dict] = []
+    chart_records: list[dict] = []
+    page_images: list[dict] = []
+    vis_idx = 0
+    if with_vision:
+        visual_pages = [p for p in parsed.pages if _page_is_visual(p)]
+        _emit("vision_start", total=len(visual_pages))
+        workers = int(os.environ.get("VISION_CONCURRENCY", "5"))
+
+        def _work(page):
+            """Render + vision one page (runs in a worker thread → parallel API calls)."""
+            png, w, h = render_page_png(str(pdf_path), page.page_number)
+            _summary, elements = extract_page_elements(png, model=vision_model, vision=vision)
+            try:
+                jpg, jw, jh = _png_to_jpeg_thumb(png)
+            except Exception:  # noqa: BLE001
+                jpg, jw, jh = png, w, h
+            return page, (jpg, jw, jh), elements
+
+        results = []
+        done = 0
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            futs = {ex.submit(_work, p): p for p in visual_pages}
+            for fut in as_completed(futs):
+                try:
+                    results.append(fut.result())
+                except Exception as e:  # noqa: BLE001
+                    log.warning("vision page failed: %s", e)
+                done += 1
+                _emit("vision_progress", done=done, total=len(visual_pages))
+
+        # Process in page order so chunk ids are deterministic.
+        results.sort(key=lambda r: r[0].page_number)
+        for page, (jpg, jw, jh), elements in results:
+            parent = parents_by_page.get(page.page_number)
+            page_images.append({
+                "parent_id": parent.parent_id if parent else f"{doc_id}::p{page.page_number:03d}",
+                "doc_id": doc_id, "page_number": page.page_number,
+                "width": jw, "height": jh, "mime_type": "image/jpeg",
+                "image_b64": base64.b64encode(jpg).decode("ascii"),
+            })
+            for el in elements:
+                routed = _route_element(
+                    el, doc_id=doc_id, page=page, parents_by_page=parents_by_page,
+                    meta=meta, vis_idx=vis_idx,
+                )
+                vis_idx += 1
+                children.extend(routed["chunks"])
+                table_rows.extend(routed["table_rows"])
+                chart_records.extend(routed["chart_records"])
+        _emit("vision_done", records=len(chart_records), figures=vis_idx,
+              pages=len(visual_pages))
+        if not dry_run:
+            repo.mark_stage(doc_id, checksum, "vision", "done",
+                            f"{vis_idx} elements, {len(chart_records)} chart recs")
+
+    # 6. propositions from prose + visual chunk descriptions
+    prop_dicts = []
+    if with_propositions:
+        # Only PROSE produces propositions. Tables/charts/figures already carry
+        # structured rows (table_rows/chart_records) + an embedded description
+        # chunk, so decomposing them too just creates noise. Skip tiny chunks
+        # (headings) that yield trivial facts.
+        src = [c for c in children
+               if c.chunk_type == "prose" and (c.token_count or 0) >= 25]
+        for i, c in enumerate(src):
+            for p_i, ptext in enumerate(extract_propositions(c.text, llm=llm)):
+                prop_dicts.append({
+                    "prop_id": f"{c.chunk_id}::prop{p_i:02d}",
+                    "chunk_id": c.chunk_id, "parent_id": c.parent_id, "doc_id": doc_id,
+                    "page_number": c.page_number, "text": ptext,
+                    "company": c.company, "doc_type": c.doc_type, "doc_date": c.doc_date,
+                    "as_of_date": c.as_of_date, "doc_family_id": c.doc_family_id,
+                    "version_label": c.version_label,
+                })
+            if progress_cb and i % 10 == 0:
+                _emit("propositions_progress", done=i, total=len(src))
+        _emit("propositions_done", total=len(prop_dicts))
+        if not dry_run:
+            repo.mark_stage(doc_id, checksum, "propositions", "done", f"{len(prop_dicts)}")
 
     if dry_run:
-        log.info("  [dry-run] skipping embedding + Snowflake writes")
-        _emit("done", stored=False, chunks=len(chunks),
-              elapsed_s=round(time.perf_counter() - t0, 2))
         return {
-            "doc_id": meta.doc_id,
-            "pages": parsed.page_count,
-            "chunks": len(chunks),
-            "by_type": by_type,
-            "stored": False,
-            "elapsed_s": round(time.perf_counter() - t0, 2),
+            "doc_id": doc_id, "company": meta.company, "doc_type": meta.doc_type,
+            "as_of_date": str(meta.as_of_date), "pages": parsed.page_count,
+            "parents": len(parents), "children": len(children),
+            "table_rows": len(table_rows), "chart_records": len(chart_records),
+            "page_images": len(page_images), "propositions": len(prop_dicts),
+            "stored": False, "elapsed_s": round(time.perf_counter() - t0, 2),
         }
 
-    # Embed (batched — was 1 call per chunk, now 1 call per ~100 chunks)
+    # 7. embed
     embedder = get_embedder()
-    _emit("embed_start", total=len(chunks), dim=embedder.dim, provider=embedder.name)
-    log.info("  embedding %d chunks (dim=%d) via %s", len(chunks), embedder.dim, embedder.name)
-    try:
-        vectors = embedder.embed([c.text for c in chunks], progress_cb=progress_cb)
-    except TypeError:
-        # Embedders without progress_cb support
-        vectors = embedder.embed([c.text for c in chunks])
-    _emit("embed_done", total=len(vectors))
+    _emit("embed_start", children=len(children), props=len(prop_dicts), rows=len(table_rows))
+    child_vecs = embedder.embed([c.text for c in children]) if children else []
+    prop_vecs = embedder.embed([p["text"] for p in prop_dicts]) if prop_dicts else []
+    row_vecs = embedder.embed([r["flat_text"] for r in table_rows]) if table_rows else []
+    _emit("embed_done")
 
-    # Upsert — single Snowflake connection reused across all DAO calls
+    # 8. store
+    rel_path = file_meta.get("original_filename") or pdf_path.name  # relative, no abs path
     with get_connection() as conn:
-        status = upsert_document(meta, page_count=parsed.page_count, conn=conn)
-        if status != "unchanged":
-            delete_chunks_for_doc(meta.doc_id, conn=conn)
-        n = insert_chunks(chunks, vectors, conn=conn)
-    _emit("upsert_done", doc_status=status, chunks=n)
-    log.info("  stored: doc=%s chunks=%d", status, n)
+        status = repo3.upsert_document(meta, file_meta, parsed.page_count, rel_path, conn=conn)
+        repo.delete_doc_artifacts(doc_id, conn=conn)
+        repo3.insert_document_file(doc_id, file_meta["original_filename"],
+                                   file_meta["mime_type"], file_meta["file_size_bytes"],
+                                   pdf_b64, conn=conn)
+        repo.insert_parent_chunks(parents, conn=conn)
+        repo3.insert_page_images(page_images, conn=conn)
+        repo.insert_children(children, child_vecs, conn=conn)
+        repo.insert_propositions(prop_dicts, prop_vecs, conn=conn)
+        repo3.insert_table_rows(table_rows, row_vecs, conn=conn)
+        repo3.insert_chart_records(chart_records, conn=conn)
+        repo.mark_stage(doc_id, checksum, "upsert", "done", status, conn=conn)
+        repo.mark_stage(doc_id, checksum, "complete", "done", "", conn=conn)
 
-    elapsed_s = round(time.perf_counter() - t0, 2)
-    _emit("done", stored=True, chunks=n, doc_status=status, elapsed_s=elapsed_s)
+    elapsed = round(time.perf_counter() - t0, 2)
+    _emit("done", stored=True, doc_status=status, elapsed_s=elapsed,
+          doc_id=doc_id, children=len(children), propositions=len(prop_dicts),
+          table_rows=len(table_rows), chart_records=len(chart_records),
+          page_images=len(page_images))
+    log.info("stored %s: %s parents=%d children=%d props=%d rows=%d charts=%d imgs=%d (%.1fs)",
+             doc_id, status, len(parents), len(children), len(prop_dicts),
+             len(table_rows), len(chart_records), len(page_images), elapsed)
     return {
-        "doc_id": meta.doc_id,
-        "pages": parsed.page_count,
-        "chunks": n,
-        "by_type": by_type,
-        "stored": True,
-        "doc_status": status,
-        "elapsed_s": elapsed_s,
+        "doc_id": doc_id, "company": meta.company, "doc_type": meta.doc_type,
+        "as_of_date": str(meta.as_of_date), "pages": parsed.page_count,
+        "parents": len(parents), "children": len(children),
+        "table_rows": len(table_rows), "chart_records": len(chart_records),
+        "page_images": len(page_images), "propositions": len(prop_dicts),
+        "stored": True, "doc_status": status, "elapsed_s": elapsed,
     }
 
 
+def _route_element(el, *, doc_id, page, parents_by_page, meta, vis_idx) -> dict:
+    """Turn one vision PageElement into chunks + table_rows + chart_records."""
+    parent = parents_by_page.get(page.page_number)
+    parent_id = parent.parent_id if parent else f"{doc_id}::p{page.page_number:03d}"
+    base = dict(
+        doc_id=doc_id, company=meta.company, doc_type=meta.doc_type,
+        doc_date=meta.doc_date, as_of_date=meta.as_of_date,
+        doc_family_id=meta.doc_family_id, version_label=meta.version_label,
+    )
+    chunks, trows, crecs = [], [], []
+    title = el.title or ""
+    desc = el.description or ""
+
+    def _chunk(text, ctype, kind_detail):
+        return Chunk(
+            chunk_id=f"{parent_id}::v{vis_idx:03d}",
+            doc_id=doc_id, parent_id=parent_id, page_number=page.page_number,
+            chunk_index=900 + vis_idx, text=text.strip(), chunk_type=ctype,
+            token_count=len(text.split()), slide_title=parent.slide_title if parent else title,
+            confidence=el.confidence, kind_detail=kind_detail,
+            company=meta.company, doc_type=meta.doc_type, doc_date=meta.doc_date,
+            as_of_date=meta.as_of_date, doc_family_id=meta.doc_family_id,
+            version_label=meta.version_label,
+        )
+
+    if el.kind == "table" and el.columns and el.rows:
+        # structured rows
+        table_id = f"{parent_id}::vt{vis_idx:02d}"
+        for ri, row in enumerate(el.rows):
+            cols = {}
+            for ci, cell in enumerate(row):
+                label = el.columns[ci] if ci < len(el.columns) else f"col{ci}"
+                cols[label or f"col{ci}"] = cell
+            flat = "; ".join(f"{k}: {v}" for k, v in cols.items() if v)
+            if not flat.strip():
+                continue
+            trows.append({
+                "row_id": f"{table_id}::r{ri:02d}", "chunk_id": f"{parent_id}::v{vis_idx:03d}",
+                "page_number": page.page_number, "table_id": table_id, "row_idx": ri,
+                "columns": cols, "flat_text": flat, **base,
+            })
+        body = "\n".join("; ".join(f"{el.columns[ci] if ci < len(el.columns) else ''}: {c}"
+                                   for ci, c in enumerate(r)) for r in el.rows)
+        chunks.append(_chunk(f"Table: {title}\n{desc}\n{body}", "table", el.kind_detail or "table"))
+
+    elif el.kind == "chart":
+        chart_id = f"{parent_id}::vc{vis_idx:02d}"
+        lines = []
+        for si, s in enumerate(el.series):
+            lbl, val, unit = s.get("label"), s.get("value"), s.get("unit") or ""
+            crecs.append({
+                "record_id": f"{chart_id}::r{si:02d}", "chunk_id": f"{parent_id}::v{vis_idx:03d}",
+                "doc_id": doc_id, "page_number": page.page_number, "chart_id": chart_id,
+                "chart_kind": el.kind_detail or "chart",
+                "label": "" if lbl is None else str(lbl), "value": "" if val is None else str(val),
+                "unit": str(unit), "bbox": "", "confidence": el.confidence,
+                "vision_model": "", "description": desc,
+                "company": meta.company, "doc_type": meta.doc_type, "doc_date": meta.doc_date,
+                "as_of_date": meta.as_of_date, "doc_family_id": meta.doc_family_id,
+            })
+            if lbl is not None:
+                lines.append(f"- {lbl}: {val}{unit}")
+        chunks.append(_chunk(f"Chart: {title}\n{desc}\n" + "\n".join(lines),
+                             "chart", el.kind_detail or "chart"))
+
+    else:  # figure | map | logo | other
+        ent = (" Entities: " + ", ".join(el.entities)) if el.entities else ""
+        chunks.append(_chunk(f"Figure: {title}\n{desc}{ent}", "figure",
+                             el.kind_detail or el.kind))
+
+    return {"chunks": chunks, "table_rows": trows, "chart_records": crecs}
+
+
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="Ingest PDFs into the RAG corpus")
-    p.add_argument("--limit", type=int, default=None, help="process only first N PDFs")
-    p.add_argument("--doc", type=str, default=None, help="process only this filename")
-    p.add_argument("--no-vision", action="store_true", help="skip Gemini vision pass")
-    p.add_argument("--vision-budget", type=int, default=None,
-                   help="cap total vision calls across this run (free-tier safety)")
-    p.add_argument("--dry-run", action="store_true",
-                   help="parse + chunk only; don't embed or write to Snowflake")
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+    p = argparse.ArgumentParser(description="v3 ingestion")
+    p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--doc", type=str, default=None)
+    p.add_argument("--no-vision", action="store_true")
+    p.add_argument("--no-propositions", action="store_true")
+    p.add_argument("--vision-model", type=str, default=DEFAULT_VISION_MODEL)
+    p.add_argument("--llm-provider", type=str, default=None)
+    p.add_argument("--llm-model", type=str, default=None)
+    p.add_argument("--force", action="store_true")
+    p.add_argument("--dry-run", action="store_true")
     args = p.parse_args(argv)
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
-    docs_dir = settings.documents_path
-    pdfs = sorted(docs_dir.glob("*.pdf"))
+    pdfs = sorted(settings.documents_path.glob("*.pdf"))
     if args.doc:
-        pdfs = [p for p in pdfs if p.name == args.doc]
+        pdfs = [x for x in pdfs if x.name == args.doc]
     if args.limit is not None:
         pdfs = pdfs[: args.limit]
     if not pdfs:
-        print("No PDFs to process.")
-        return 1
+        print("No PDFs."); return 1
 
-    print(f"Ingesting {len(pdfs)} PDF(s) from {docs_dir}")
-    results = []
+    ingest_llm = get_llm(args.llm_provider, args.llm_model) if (args.llm_provider or args.llm_model) else None
+    print(f"v3 ingesting {len(pdfs)} PDF(s); vision_model={args.vision_model}")
     for pdf in pdfs:
         try:
-            r = ingest_one(
-                pdf,
-                with_vision=not args.no_vision,
-                vision_call_budget=args.vision_budget,
-                dry_run=args.dry_run,
-            )
-            results.append(r)
-        except Exception as e:
-            log.exception("FAILED %s: %s", pdf.name, e)
-            results.append({"doc": pdf.name, "error": str(e)})
-
-    print("\n=== Summary ===")
-    for r in results:
-        print(f"  {r}")
+            r = ingest_one(pdf, with_vision=not args.no_vision,
+                              with_propositions=not args.no_propositions,
+                              vision_model=args.vision_model, force=args.force,
+                              dry_run=args.dry_run, llm=ingest_llm)
+            print(f"  {r}")
+        except Exception as e:  # noqa: BLE001
+            log.exception("FAILED %s", pdf.name)
+            print(f"  FAILED {pdf.name}: {e}")
     return 0
 
 

@@ -41,14 +41,32 @@ log = logging.getLogger(__name__)
 _JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
+_JUDGE = None
+
+
+def _judge_llm():
+    """Dedicated judge model — Gemini 2.5 Flash (separate from generation),
+    independent of whatever model produced the answer."""
+    global _JUDGE
+    if _JUDGE is None:
+        _JUDGE = get_llm("gemini", "gemini-2.5-flash")
+    return _JUDGE
+
+
 def _ask_judge(prompt: str, *, max_tokens: int = 600) -> str:
-    """Run the configured judge LLM with no system prompt."""
-    llm = get_llm()
-    return llm.generate(
-        [Message(role="user", content=prompt)],
-        temperature=0.0,
-        max_tokens=max_tokens,
-    )
+    """Run the judge LLM. thinking_budget=0 keeps Gemini 2.5 from spending the
+    output budget on hidden reasoning and truncating the JSON."""
+    llm = _judge_llm()
+    try:
+        return llm.generate(
+            [Message(role="user", content=prompt)],
+            temperature=0.0, max_tokens=max_tokens, thinking_budget=0,
+        )
+    except TypeError:
+        return llm.generate(
+            [Message(role="user", content=prompt)],
+            temperature=0.0, max_tokens=max_tokens,
+        )
 
 
 def _parse_json(raw: str) -> dict | None:
@@ -64,7 +82,7 @@ def _parse_json(raw: str) -> dict | None:
         return None
 
 
-def _format_chunks(chunks, *, max_chars: int = 600) -> str:
+def _format_chunks(chunks, *, max_chars: int = 1400) -> str:
     """Render chunks as [N] Source ... blocks the judge can reason over."""
     out = []
     for i, c in enumerate(chunks, start=1):
@@ -232,6 +250,48 @@ def judge_context_recall(
     joined = "\n".join((c.text or "").lower() for c in retrieved_chunks)
     hits = sum(1 for p in phrases if p.lower() in joined)
     return hits / len(phrases)
+
+
+# ---------------------------------------------------------------------------
+# 4b. Context recall vs a reference (for the battery, where the "expected
+#     behavior" text is the reference rather than explicit must_contain phrases)
+# ---------------------------------------------------------------------------
+_RECALL_REF_PROMPT = """\
+You are measuring CONTEXT RECALL: of the key facts the EXPECTED ANSWER needs,
+what fraction are actually present in the RETRIEVED CHUNKS?
+
+QUESTION:
+{question}
+
+EXPECTED BEHAVIOR / KEY FACTS THE ANSWER SHOULD CONTAIN:
+{reference}
+
+RETRIEVED CHUNKS:
+{chunks}
+
+Step 1: list the key facts implied by the expected behavior.
+Step 2: for each, mark 1 if it is present in the chunks, else 0.
+
+Return ONLY JSON: {{"facts":[{{"fact":"...","present":0|1}}], "recall": <mean 0.0-1.0>}}
+"""
+
+
+def judge_context_recall_ref(question: str, reference: str, retrieved_chunks) -> float | None:
+    if not retrieved_chunks or not (reference or "").strip():
+        return None
+    prompt = _RECALL_REF_PROMPT.format(
+        question=question.strip(), reference=reference.strip()[:1500],
+        chunks=_format_chunks(retrieved_chunks),
+    )
+    parsed = _parse_json(_ask_judge(prompt, max_tokens=1200))
+    if not parsed:
+        return None
+    val = parsed.get("recall")
+    if isinstance(val, (int, float)):
+        return max(0.0, min(1.0, float(val)))
+    facts = parsed.get("facts") or []
+    nums = [f.get("present") for f in facts if isinstance(f.get("present"), (int, float))]
+    return (sum(nums) / len(nums)) if nums else None
 
 
 # ---------------------------------------------------------------------------

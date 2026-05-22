@@ -1,0 +1,303 @@
+# Vectera RAG Self-Evaluation Battery — 24 questions across 6 groups
+# Source: Vectera_RAG_Self_Evaluation_Battery.docx 
+# Each question is designed to probe a specific failure mode of naive RAG.
+
+- id: Q1
+  group: A
+  group_name: "Version & temporal awareness"
+  question: "What is Digital Realty's total IT capacity?"
+  diagnoses: >
+    Version-pair retrieval under semantic near-duplication. The Dec 2025 and Mar 2026
+    decks have identical slide titles ("Offering a Global Data Center Platform") with
+    materially different numbers (2.9 GW in-place / 730 MW under construction vs
+    3 GW in-place / 5 GW future = ~8 GW total) and different definitions of
+    "total capacity." Tests: (a) ingestion preserves document-level as_of_date,
+    (b) retrieval surfaces both versions despite near-identical vectors,
+    (c) reranker does not collapse them as duplicates, (d) generation preserves
+    attribution rather than blending or arbitrarily picking one.
+
+- id: Q2
+  group: A
+  group_name: "Version & temporal awareness"
+  question: "What is BXP's projected 2026 occupancy?"
+  diagnoses: >
+    Document-type recency hierarchy. Investor Day (Jun 30, 2025) gave a range of
+    87.25-88%; Q4 deck (Mar 2026) tightened to a point estimate of 88%. Tests
+    whether the system recognizes that a Q4 quarterly update supersedes a mid-year
+    Investor Day for forward guidance, and either presents both with chronology
+    or prefers the more recent disclosure.
+
+- id: Q3
+  group: A
+  group_name: "Version & temporal awareness"
+  question: "What's changed in BXP's strategy between the 2025 Investor Day and the Q4 2025 update?"
+  diagnoses: >
+    Same-company, two-document temporal-delta reasoning. Strategic framework is
+    unchanged but execution has advanced: dividend reset announced in Investor Day,
+    reported as completed in Q4; occupancy guidance tightened; 2026 FFO guidance
+    ($6.96 midpoint) became public; CBD share rose 90.5% to 90.8% of NOI. Tests
+    cross-document synthesis from the same issuer, ordered chronologically, with
+    the ability to distinguish "stable framework" from "evolved disclosure."
+
+- id: Q4
+  group: A
+  group_name: "Version & temporal awareness"
+  question: "What is the economic impact of Simon's shopping centers on local communities?"
+  diagnoses: >
+    Absolute-date staleness awareness. The Simon report is dated November 2018 with
+    2017 data — ~7 years older than the rest of the corpus. The publication date
+    is on page 2, not in the filename. Tests: (a) parser extracts publication date
+    from document content (not just filename), (b) generation flags the absolute
+    age of the source rather than presenting 2017 numbers as current fact.
+
+- id: Q5
+  group: B
+  group_name: "Intra-document inconsistency & footnote awareness"
+  question: "How many customers does Digital Realty have?"
+  diagnoses: >
+    Within-document inconsistency + footnote-attached-as-of-date. In the Mar 2026
+    deck alone, page 3 says "5,500+ Customers" and page 23 says "5,000+ Global
+    Customers" — both with footnotes citing Dec 31, 2025. The Dec 2025 deck says
+    5,000+. Tests: (a) chunker preserves the footnote's as-of date alongside the
+    body number, (b) retrieval surfaces all three pages, (c) generation acknowledges
+    the page-3-vs-page-23 inconsistency rather than picking one silently.
+
+- id: Q6
+  group: B
+  group_name: "Intra-document inconsistency & footnote awareness"
+  question: "What is BXP's dividend yield?"
+  diagnoses: >
+    Footnote-body integrity at the chunk level. The Investor Day dividend slide
+    shows yield at 3.9% (chart body, using post-reset $0.70 × 4 / Aug 29, 2025
+    price). The Q4 deck shows ~5.2% (using a later 2026 stock price). Same
+    dividend, different yields because stock price moved. Tests whether the parser
+    keeps body and date-qualifier footnote in the same chunk, and whether retrieval
+    surfaces both decks rather than just one.
+
+- id: Q7
+  group: B
+  group_name: "Intra-document inconsistency & footnote awareness"
+  question: "What was BXP's actual market dividend yield as of August 29, 2025?"
+  diagnoses: >
+    Footnote-as-truth-source contradicting the chart body. On the same slide where
+    the chart body says "3.9%," footnote 2 says "BXP's dividend yield as of August
+    29, 2025 was 5.47%." The chart number is a normalized post-reset construct;
+    the footnote is the actual market-implied figure. Tests the hardest version of
+    footnote awareness: not "footnote adds context" but "footnote contradicts the
+    headline." Body-only chunkers will answer 3.9% with full confidence.
+
+- id: Q8
+  group: B
+  group_name: "Intra-document inconsistency & footnote awareness"
+  question: "How has Digital Realty's customer credit-quality profile changed between the Dec 2025 and Mar 2026 presentations?"
+  diagnoses: >
+    Methodology change buried in footnotes. Both decks report ~50-51%
+    investment-grade customers, but footnote 2 reveals the basis changed:
+    Dec 2025 uses top-10 customers / $4.5B revenue; Mar 2026 uses top-100 customers
+    / $6.1B revenue (10x expansion of customer sample, 36% revenue growth). Tests
+    whether the system surfaces that "the number changed from X to Y" is meaningless
+    because "the way it was measured also changed."
+
+- id: Q9
+  group: B
+  group_name: "Intra-document inconsistency & footnote awareness"
+  question: "In how many countries does Realty Income operate?"
+  diagnoses: >
+    Intra-document scope ambiguity. Pages 5 and 6 say "10 countries"
+    (US + UK + 8 European); pages 15 and 31 say "9 countries" specifically in the
+    European footprint context. Both correct under different definitions. Tests
+    whether retrieval surfaces both with their scope qualifiers and generation
+    resolves the apparent contradiction by reading surrounding context rather than
+    flattening to one answer.
+
+- id: Q10
+  group: B
+  group_name: "Intra-document inconsistency & footnote awareness"
+  question: "How big is EastGroup's portfolio?"
+  diagnoses: >
+    Qualifier-aware chunking. Page 3 says "approximately 65 million square feet"
+    including development projects and value-add acquisitions in lease-up and under
+    construction. Page 9 says "65 Million Square Feet Under Ownership" — a different
+    scope. Tests whether the chunker keeps each number with its specific scope
+    qualifier rather than producing two chunks that both say "65M SF" with the
+    qualifier amputated.
+
+- id: Q11
+  group: C
+  group_name: "Document-type and scope distinctions"
+  question: "What is Public Storage's NOI margin?"
+  diagnoses: >
+    Document-type metadata as a first-class field. Standalone Company Update
+    (March 2026) reports 78% margin for PSA. Merger Presentation (March 16, 2026)
+    reports the same 78% PSA standalone, plus 69% NSA and 77% pro-forma combined.
+    Same company, same month, different document purposes. Tests whether the system
+    tags document_type ("Company Update" vs "Merger Presentation") and presents each
+    scope with attribution. Without doc-type metadata, retrieval mixes standalone
+    and pro-forma chunks and the LLM produces confused or wrong answers.
+
+- id: Q12
+  group: C
+  group_name: "Document-type and scope distinctions"
+  question: "What is PSA's outlook for 2026?"
+  diagnoses: >
+    Standalone vs incremental scope. Company Update (page 15) projects organic
+    decline: revenue -2.2% to 0.0%, NOI -3.9% to -0.5%. Merger Presentation says
+    the announced NSA acquisition is FFO-neutral in 2026, then $0.10-0.20 accretive
+    in 2027, $0.35-0.50 at stabilization. These are additive, not contradictory.
+    Tests whether the system presents both with their scopes labeled, rather than
+    blending into a falsely averaged outlook.
+
+- id: Q13
+  group: C
+  group_name: "Document-type and scope distinctions"
+  question: "What percentage of BXP's portfolio is in CBD markets?"
+  diagnoses: >
+    Metric-definition awareness across decks. Investor Day page 18 reports
+    CBD = 90.5% of NOI as of Q2 2025 (and shows 70.9% in Q2 2020 — strategic shift).
+    Q4 deck page 7 says CBD = ~90% of Annualized Rental Obligations. Q4 deck page 9
+    says CBD = 90.8% of NOI. Same approximate number, different metrics (NOI vs ARO),
+    different as-of dates. Tests whether the system distinguishes the metric
+    definitions rather than treating the numbers as duplicates.
+
+- id: Q14
+  group: C
+  group_name: "Document-type and scope distinctions"
+  question: "What is the average occupancy difference between Public Storage and NSA's same-store portfolios?"
+  diagnoses: >
+    Table parsing with column-to-entity preservation. PSA Merger Presentation page 4
+    has a 3-column comparison table: PSA 92.0% / NSA 84.3% / Pro Forma 90.3% — a
+    7.7 pp gap. Pure pdftotext produces a chunk like "92.0% 84.3% 90.3%" with no
+    column labels attached. Tests whether the parser is table-aware (Docling, etc.)
+    and produces structured rows where each value carries its column identity.
+
+- id: Q15
+  group: D
+  group_name: "Chart, table, and map parsing"
+  question: "Among the major self-storage REITs, what is each company's same-store NOI growth and NOI margin?"
+  diagnoses: >
+    The production-readiness test. PSA Company Update page 7 has six bar subcharts
+    in a 2x3 grid. The legend strip at the bottom reads "PSA / CubeSmart /
+    Extra Space / NSA" — a fixed order. But each subchart re-sorts the four peers by
+    performance ranking, so NOI growth has order PSA / CUBE / EXR / NSA while NOI
+    margin has PSA / EXR / CUBE / NSA. The legend is at a third order. Text
+    extraction yields a row of numbers with no reliable mapping to companies. Tests:
+    (a) parser uses vision/OCR with spatial coordinates that tie each bar value to
+    its per-subchart label (not the legend), (b) the system honestly reports if it
+    cannot make this mapping.
+
+- id: Q16
+  group: D
+  group_name: "Chart, table, and map parsing"
+  question: "Who is VICI's largest tenant by rent, and what percentage of rent do they represent?"
+  diagnoses: >
+    Logo-rendered identity + honesty about extraction limits. VICI page 7's tenant
+    table has 13 rows. The rent percentages (39%, 34%, 9%, 5%, ...) are extractable
+    text. The tenant names are rendered as logo images and yield nothing from text
+    extraction. Tests: (a) the system surfaces the percentages it has rather than
+    refusing to answer, (b) either uses vision/OCR on the logos or cross-references
+    other pages where Caesars and MGM appear as named tenants in body text,
+    (c) honestly states which parts are vision-extracted vs cross-referenced vs
+    unknown. The wrong behavior is silently inventing tenant names.
+
+- id: Q17
+  group: D
+  group_name: "Chart, table, and map parsing"
+  question: "What are VICI's 10 trophy assets on the Las Vegas Strip?"
+  diagnoses: >
+    Map-rendered property names + intra-document cross-page synthesis. VICI page 14
+    claims "10 Trophy Assets on the Las Vegas Strip" but text extraction yields
+    only "MGM Grand" — the other 9 names are baked into the map graphic. However,
+    pages 13 (Recently Reimagined Assets) and 16 (Sports Triangle) name several of
+    the same properties in body text: Caesars Palace, Venetian Resort Las Vegas,
+    MGM Grand, Mandalay Bay, Park MGM, New York-New York, Excalibur, Luxor. Tests
+    whether the system performs cross-page synthesis within the same document to
+    reconstruct what the map graphic encoded.
+
+- id: Q18
+  group: D
+  group_name: "Chart, table, and map parsing"
+  question: "What share of Realty Income's annualized base rent comes from each U.S. region vs Europe?"
+  diagnoses: >
+    Spatial-layout parsing of map-embedded data. Page 15 of Realty Income's deck
+    shows seven U.S. regions and the U.K./Europe with each region's property count
+    and ABR percentage placed at a geographic position on a world map. Text
+    extraction yields a jumbled sequence ("PACIFIC NORTHWEST 235 1.6% MIDWEST 4,002
+    20.3% NORTHEAST 1,036 9.2%...") where adjacency between region label and its
+    numbers is broken. Tests whether the parser preserves spatial groupings.
+
+- id: Q19
+  group: D
+  group_name: "Chart, table, and map parsing"
+  question: "Which markets does EastGroup operate in, ranked by importance?"
+  diagnoses: >
+    Multi-page synthesis with honest limitation reporting. Page 6 of EGP's deck is
+    a U.S. map with city-level dots whose sizes encode property count — fully
+    unreadable from text. Page 8 has the state-level breakdown by ABR (Texas 35%,
+    Florida 25%, California 15%, Arizona 8%, North Carolina 5%, Other 12%). Tests
+    whether the system retrieves both pages, returns the quantitative state-level
+    data from page 8, and honestly notes that page 6's city-level granularity is
+    not extractable from text.
+
+- id: Q20
+  group: E
+  group_name: "Ingestion quality"
+  question: "What is EastGroup's strategy for property selection?"
+  diagnoses: >
+    Content-density filtering during ingestion. ~30 of EGP's 40 pages are property
+    photos with one-line captions ("Mesa Gateway / Phoenix, AZ / 5"). The
+    substantive strategy content lives on roughly pages 3, 6, 9, 11. Tests whether
+    the ingestion pipeline either (a) filters out low-content pages, (b) weights
+    chunk relevance by length/density so empty caption chunks don't outrank
+    substantive ones, or (c) uses vision to extract more information from the photo
+    pages. Naive chunkers create ~30 tiny chunks of "Property Name / City, State"
+    that pollute retrieval.
+
+- id: Q21
+  group: E
+  group_name: "Ingestion quality"
+  question: "What is BXP's key strategy?"
+  diagnoses: >
+    Structured-list preservation during chunking + multi-doc synthesis. Investor Day
+    page 50 ("SUMMARY: Current Strengths / Action Plan") is a 2-column slide with
+    six bullet points on each side — a structured list. Tests: (a) chunker keeps
+    the full SUMMARY slide together rather than fragmenting the bullets across
+    multiple chunks, (b) the system retrieves the Investor Day strategic frame and
+    the Q4 deck execution-status updates that reinforce it.
+
+- id: Q22
+  group: F
+  group_name: "Cross-document synthesis"
+  question: "How is AI affecting demand across the different real estate sectors represented in these documents?"
+  diagnoses: >
+    Cross-document retrieval diversification (MMR or per-doc quota). Digital Realty
+    has 100+ AI mentions and ~6 slides explicitly on AI demand; BXP has a different
+    AI angle (favoring CBD gateway markets); PSA frames AI as an internal efficiency
+    tool, not a demand driver; VICI / Realty Income / Simon / EGP have minimal AI
+    content. Without retrieval diversification, top-K retrieval will be ~8 chunks
+    all from DLR and the answer will be "AI drives 2.7x data center growth" —
+    missing the sector comparison.
+
+- id: Q23
+  group: F
+  group_name: "Cross-document synthesis"
+  question: "VICI and Realty Income both mention gaming exposure. How are their gaming portfolios different?"
+  diagnoses: >
+    Cross-document same-sector framing with balanced retrieval. VICI is ~100%
+    gaming/experiential (54 gaming + 39 experiential properties; Caesars and MGM
+    are 39% and 34% of rent). Realty Income treats gaming as one diversification
+    segment among many (retail / industrial / gaming / data centers / credit).
+    Tests whether the system balances retrieval across the two documents.
+
+- id: Q24
+  group: F
+  group_name: "Cross-document synthesis"
+  question: "What is the 2026 FFO outlook for each REIT in the corpus?"
+  diagnoses: >
+    Per-company disciplined retrieval + honest negatives. BXP discloses $6.96
+    midpoint 2026 FFO/share. PSA standalone gives 2026 ranges (revenue -2.2% to
+    0.0%, NOI -3.9% to -0.5%); PSA merger pro-forma gives FFO-neutral 2026 →
+    $0.10-0.20 accretive 2027 → $0.35-0.50 at stabilization. VICI, DLR, Realty
+    Income, EGP, Simon do not provide 2026 FFO/share guidance in their decks.
+    Tests whether the system retrieves separately per company, distinguishes
+    standalone from pro-forma for PSA, and honestly reports "not disclosed" for
+    the others rather than guessing.
