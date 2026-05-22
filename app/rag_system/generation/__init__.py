@@ -1,5 +1,5 @@
 """Answer generation: conflict-aware, cited responses over retrieved sources."""
 
-from rag_system.generation.generate_v2 import AnswerV2, answer_query
+from rag_system.generation.generate import Answer, answer_query
 
-__all__ = ["answer_query", "AnswerV2"]
+__all__ = ["answer_query", "Answer"]

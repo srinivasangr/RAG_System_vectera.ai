@@ -148,7 +148,7 @@ async def list_jobs():
 # ---------------------------------------------------------------------------
 @app.get("/api/documents")
 async def documents():
-    from rag_system.storage import repository_v2 as repo
+    from rag_system.storage import repository as repo
     try:
         return repo.list_documents()
     except Exception as e:  # noqa: BLE001
@@ -157,14 +157,14 @@ async def documents():
 
 @app.delete("/api/documents/{doc_id}")
 async def delete_document(doc_id: str):
-    from rag_system.storage import repository_v2 as repo
-    counts = repo.delete_document_v2(doc_id)
+    from rag_system.storage import repository as repo
+    counts = repo.delete_document(doc_id)
     return {"deleted": doc_id, "counts": counts}
 
 
 @app.get("/api/corpus-profile")
 async def corpus_profile():
-    from rag_system.storage import repository_v2 as repo
+    from rag_system.storage import repository as repo
     try:
         return repo.corpus_profile()
     except Exception as e:  # noqa: BLE001
@@ -215,7 +215,7 @@ async def query(payload: dict):
     model = payload.get("model") or "gemini-2.5-flash"
     filters = _build_filters(payload.get("doc_ids"))
 
-    from rag_system.generation.generate_v2 import answer_query
+    from rag_system.generation.generate import answer_query
     a = await asyncio.to_thread(
         lambda: answer_query(q, provider=provider, model=model, filters=filters))
     return _answer_to_dict(a)
@@ -242,7 +242,7 @@ async def query_stream(payload: dict):
         evq.put({"event": "stage", "stage": stage})
 
     def run():
-        from rag_system.generation.generate_v2 import answer_query
+        from rag_system.generation.generate import answer_query
         try:
             a = answer_query(q, provider=provider, model=model,
                              filters=filters, progress_cb=progress_cb)
@@ -273,7 +273,7 @@ async def query_stream(payload: dict):
 @app.get("/api/history")
 async def history(limit: int = 50):
     """Recent queries from query_log (for the History tab)."""
-    from rag_system.storage import repository_v3 as repo3
+    from rag_system.storage import repository as repo3
     try:
         return repo3.recent_queries(limit)
     except Exception as e:  # noqa: BLE001
@@ -285,7 +285,7 @@ async def page_image(parent_id: str):
     """Serve the stored page thumbnail for a citation."""
     import base64
     from fastapi.responses import Response
-    from rag_system.storage import repository_v3 as repo3
+    from rag_system.storage import repository as repo3
     img = repo3.get_page_image(parent_id)
     if not img:
         raise HTTPException(404, "no image")

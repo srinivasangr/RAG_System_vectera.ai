@@ -113,44 +113,7 @@ def is_complete_by_checksum(checksum: str, *, conn=None) -> bool:
 # ---------------------------------------------------------------------------
 # Documents (v2)
 # ---------------------------------------------------------------------------
-def upsert_document_v2(meta, page_count: int, *, conn=None) -> str:
-    """Insert/update a documents row with v2 columns. Returns status."""
-    with _use_connection(conn) as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT checksum FROM documents WHERE doc_id=%s", (meta.doc_id,))
-        row = cur.fetchone()
-        params = (
-            meta.source_path, meta.company, meta.ticker, meta.doc_date, meta.doc_type,
-            meta.doc_type_conf, meta.version_label, meta.as_of_date, meta.as_of_source,
-            meta.doc_family_id, page_count, meta.checksum,
-        )
-        if row is None:
-            cur.execute(
-                """INSERT INTO documents
-                     (doc_id, source_path, company, ticker, doc_date, doc_type,
-                      doc_type_conf, version_label, as_of_date, as_of_source,
-                      doc_family_id, page_count, checksum)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                (meta.doc_id, *params),
-            )
-            status = "inserted"
-        else:
-            cur.execute(
-                """UPDATE documents SET
-                     source_path=%s, company=%s, ticker=%s, doc_date=%s, doc_type=%s,
-                     doc_type_conf=%s, version_label=%s, as_of_date=%s, as_of_source=%s,
-                     doc_family_id=%s, page_count=%s, checksum=%s,
-                     ingested_at=CURRENT_TIMESTAMP()
-                   WHERE doc_id=%s""",
-                (*params, meta.doc_id),
-            )
-            status = "updated"
-        conn.commit()
-        cur.close()
-    return status
-
-
-def delete_doc_artifacts_v2(doc_id: str, *, conn=None) -> dict:
+def delete_doc_artifacts(doc_id: str, *, conn=None) -> dict:
     """Remove all v2 artifacts for a doc so a re-ingest starts clean."""
     counts = {}
     with _use_connection(conn) as conn:
@@ -190,7 +153,7 @@ def insert_parent_chunks(parents, *, conn=None) -> int:
 # ---------------------------------------------------------------------------
 # Child chunks (v2)
 # ---------------------------------------------------------------------------
-def insert_children_v2(children, embeddings: list[list[float]], *, conn=None) -> int:
+def insert_children(children, embeddings: list[list[float]], *, conn=None) -> int:
     children = list(children)
     if len(children) != len(embeddings):
         raise ValueError(f"children={len(children)} != embeddings={len(embeddings)}")
@@ -256,37 +219,6 @@ def insert_propositions(props, embeddings: list[list[float]], *, conn=None) -> i
 # ---------------------------------------------------------------------------
 # Table rows
 # ---------------------------------------------------------------------------
-def insert_table_rows(rows, embeddings: list[list[float]], *, conn=None) -> int:
-    rows = list(rows)
-    if len(rows) != len(embeddings):
-        raise ValueError(f"rows={len(rows)} != embeddings={len(embeddings)}")
-    if not rows:
-        return 0
-    dim = len(embeddings[0])
-    with _use_connection(conn) as conn:
-        cur = conn.cursor()
-        for r, vec in zip(rows, embeddings):
-            cur.execute(
-                f"""INSERT INTO table_rows
-                     (row_id, chunk_id, doc_id, page_number, table_id, row_idx,
-                      columns_json, flat_text, embedding, company, doc_type,
-                      doc_date, as_of_date, doc_family_id)
-                   SELECT %s,%s,%s,%s,%s,%s,
-                          PARSE_JSON(%s),%s,
-                          {_vec(vec)}::VECTOR(FLOAT,{dim}),
-                          %s,%s,%s,%s,%s""",
-                (r.row_id, r.chunk_id, r.doc_id, r.page_number, r.table_id, r.row_idx,
-                 json.dumps(r.columns), r.flat_text, r.company, r.doc_type,
-                 r.doc_date, r.as_of_date, r.doc_family_id),
-            )
-        conn.commit()
-        cur.close()
-    return len(rows)
-
-
-# ---------------------------------------------------------------------------
-# Chart records (no embedding — retrieved by company + label/value match)
-# ---------------------------------------------------------------------------
 def list_documents(*, conn=None) -> list[dict]:
     """List ingested documents with per-doc artifact counts (for the UI)."""
     with _use_connection(conn) as conn:
@@ -338,10 +270,10 @@ def corpus_profile(*, conn=None) -> dict:
     }
 
 
-def delete_document_v2(doc_id: str, *, conn=None) -> dict:
+def delete_document(doc_id: str, *, conn=None) -> dict:
     """Delete a document and all its v2 artifacts."""
     with _use_connection(conn) as conn:
-        counts = delete_doc_artifacts_v2(doc_id, conn=conn)
+        counts = delete_doc_artifacts(doc_id, conn=conn)
         cur = conn.cursor()
         cur.execute("DELETE FROM documents WHERE doc_id=%s", (doc_id,))
         counts["documents"] = cur.rowcount or 0
@@ -351,24 +283,202 @@ def delete_document_v2(doc_id: str, *, conn=None) -> dict:
     return counts
 
 
+def upsert_document(meta, file_meta: dict, page_count: int,
+                       stored_pdf_path: str, *, conn=None) -> str:
+    """Insert/update a documents row with identity (meta) + file metadata."""
+    with _use_connection(conn) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT checksum FROM documents WHERE doc_id=%s", (meta.doc_id,))
+        exists = cur.fetchone() is not None
+        cols_vals = {
+            "source_path": stored_pdf_path,           # relative, not absolute
+            "company": meta.company, "ticker": meta.ticker,
+            "doc_date": meta.doc_date, "doc_type": meta.doc_type,
+            "doc_type_conf": meta.doc_type_conf, "version_label": meta.version_label,
+            "as_of_date": meta.as_of_date, "as_of_source": meta.as_of_source,
+            "doc_family_id": meta.doc_family_id, "page_count": page_count,
+            "checksum": meta.checksum,
+            "original_filename": file_meta.get("original_filename"),
+            "stored_pdf_path": stored_pdf_path,
+            "file_size_bytes": file_meta.get("file_size_bytes"),
+            "mime_type": file_meta.get("mime_type"),
+            "pdf_author": file_meta.get("pdf_author"),
+            "pdf_title": file_meta.get("pdf_title"),
+            "pdf_created": file_meta.get("pdf_created"),
+            "pdf_page_count": file_meta.get("pdf_page_count"),
+        }
+        if exists:
+            sets = ", ".join(f"{k}=%s" for k in cols_vals)
+            cur.execute(
+                f"UPDATE documents SET {sets}, ingested_at=CURRENT_TIMESTAMP() "
+                f"WHERE doc_id=%s",
+                (*cols_vals.values(), meta.doc_id),
+            )
+            status = "updated"
+        else:
+            cols = ", ".join(["doc_id", *cols_vals.keys()])
+            ph = ", ".join(["%s"] * (1 + len(cols_vals)))
+            cur.execute(
+                f"INSERT INTO documents ({cols}) VALUES ({ph})",
+                (meta.doc_id, *cols_vals.values()),
+            )
+            status = "inserted"
+        conn.commit()
+        cur.close()
+    return status
+
+
+def insert_document_file(doc_id: str, filename: str, mime: str,
+                         size_bytes: int, content_b64: str, *, conn=None) -> None:
+    with _use_connection(conn) as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM document_files WHERE doc_id=%s", (doc_id,))
+        cur.execute(
+            """INSERT INTO document_files (doc_id, filename, mime, size_bytes, content_b64)
+               VALUES (%s,%s,%s,%s,%s)""",
+            (doc_id, filename, mime, size_bytes, content_b64),
+        )
+        conn.commit()
+        cur.close()
+
+
+def insert_page_images(rows, *, conn=None) -> int:
+    """rows: iterable of dicts {parent_id, doc_id, page_number, width, height, image_b64}."""
+    rows = list(rows)
+    if not rows:
+        return 0
+    with _use_connection(conn) as conn:
+        cur = conn.cursor()
+        cur.executemany(
+            """INSERT INTO page_images
+                 (parent_id, doc_id, page_number, width, height, mime_type, image_b64)
+               VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+            [(r["parent_id"], r["doc_id"], r["page_number"], r.get("width"),
+              r.get("height"), r.get("mime_type", "image/png"), r["image_b64"])
+             for r in rows],
+        )
+        conn.commit()
+        cur.close()
+    return len(rows)
+
+
 def insert_chart_records(records, *, conn=None) -> int:
+    """records: iterable of dicts with keys matching chart_records (+ description)."""
     records = list(records)
     if not records:
         return 0
     with _use_connection(conn) as conn:
         cur = conn.cursor()
-        for r in records:
-            cur.execute(
-                """INSERT INTO chart_records
-                     (record_id, chunk_id, doc_id, page_number, chart_id, chart_kind,
-                      label, value, unit, bbox, confidence, vision_model,
-                      company, doc_type, doc_date, as_of_date, doc_family_id)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                (r.record_id, r.chunk_id, r.doc_id, r.page_number, r.chart_id,
-                 r.chart_kind, r.label, r.value, r.unit, r.bbox, r.confidence,
-                 r.vision_model, r.company, r.doc_type, r.doc_date, r.as_of_date,
-                 r.doc_family_id),
-            )
+        cur.executemany(
+            """INSERT INTO chart_records
+                 (record_id, chunk_id, doc_id, page_number, chart_id, chart_kind,
+                  label, value, unit, bbox, confidence, vision_model, description,
+                  company, doc_type, doc_date, as_of_date, doc_family_id)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            [(r["record_id"], r.get("chunk_id"), r["doc_id"], r.get("page_number"),
+              r.get("chart_id"), r.get("chart_kind"), r.get("label", ""),
+              r.get("value", ""), r.get("unit", ""), r.get("bbox", ""),
+              r.get("confidence", 0.0), r.get("vision_model", ""),
+              r.get("description", ""), r.get("company"), r.get("doc_type"),
+              r.get("doc_date"), r.get("as_of_date"), r.get("doc_family_id"))
+             for r in records],
+        )
         conn.commit()
         cur.close()
     return len(records)
+
+
+def log_query(*, question, answer, intent, sub_queries, retrieved_ids,
+                 retrieval_stages, conflict_pairs, provider_chain, llm_provider,
+                 llm_model, total_latency_ms, doc_ids=None, conn=None) -> str:
+    """Append one row to query_log with the v2 trace columns. Best-effort —
+    callers wrap in try/except so logging never breaks a query."""
+    import json as _json
+    import uuid as _uuid
+    qid = _uuid.uuid4().hex
+    with _use_connection(conn) as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO query_log
+                 (query_id, question, filters, retrieved_ids, answer,
+                  llm_provider, llm_model, latency_ms, router_intent, sub_queries,
+                  retrieval_stages, conflict_pairs, provider_chain, total_latency_ms)
+               SELECT %s, %s, PARSE_JSON(%s), PARSE_JSON(%s)::ARRAY, %s,
+                      %s, %s, %s, %s, PARSE_JSON(%s),
+                      PARSE_JSON(%s), PARSE_JSON(%s), PARSE_JSON(%s), %s""",
+            (qid, question, _json.dumps({"doc_ids": list(doc_ids or [])}),
+             _json.dumps(list(retrieved_ids or [])), answer,
+             llm_provider, llm_model, total_latency_ms, intent,
+             _json.dumps(list(sub_queries or [])),
+             _json.dumps(retrieval_stages or {}),
+             _json.dumps(conflict_pairs or []),
+             _json.dumps(provider_chain or []),
+             total_latency_ms),
+        )
+        conn.commit()
+        cur.close()
+    return qid
+
+
+def recent_queries(limit: int = 50, *, conn=None) -> list[dict]:
+    """Recent query_log entries for the History tab."""
+    with _use_connection(conn) as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """SELECT query_id, question, answer, router_intent, llm_provider,
+                      llm_model, total_latency_ms, created_at
+               FROM query_log
+               ORDER BY created_at DESC NULLS LAST
+               LIMIT %s""", (limit,))
+        cols = ["query_id", "question", "answer", "intent", "llm_provider",
+                "llm_model", "total_latency_ms", "created_at"]
+        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        cur.close()
+    for r in rows:
+        if r.get("created_at") is not None:
+            r["created_at"] = str(r["created_at"])
+    return rows
+
+
+def get_page_image(parent_id: str, *, conn=None):
+    """Return (mime_type, image_b64) for a page, or None."""
+    with _use_connection(conn) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT mime_type, image_b64 FROM page_images WHERE parent_id=%s",
+                    (parent_id,))
+        row = cur.fetchone()
+        cur.close()
+    return (row[0], row[1]) if row and row[1] else None
+
+
+def insert_table_rows(rows, embeddings, *, conn=None) -> int:
+    """rows: list of dicts; embeddings parallel list. Writes table_rows."""
+    rows = list(rows)
+    if len(rows) != len(embeddings):
+        raise ValueError(f"rows={len(rows)} != embeddings={len(embeddings)}")
+    if not rows:
+        return 0
+    dim = len(embeddings[0])
+    # columns_json needs PARSE_JSON(%s); embedding (vector) is placed LAST.
+    col_names = [
+        "row_id", "chunk_id", "doc_id", "page_number", "table_id", "row_idx",
+        "columns_json", "flat_text", "company", "doc_type", "doc_date",
+        "as_of_date", "doc_family_id", "embedding",
+    ]
+    col_exprs = ["%s", "%s", "%s", "%s", "%s", "%s", "PARSE_JSON(%s)", "%s",
+                 "%s", "%s", "%s", "%s", "%s"]
+    scalar_rows = [
+        (r["row_id"], r.get("chunk_id"), r["doc_id"], r.get("page_number"),
+         r.get("table_id"), r.get("row_idx"), json.dumps(r.get("columns", {})),
+         r.get("flat_text", ""), r.get("company"), r.get("doc_type"),
+         r.get("doc_date"), r.get("as_of_date"), r.get("doc_family_id"))
+        for r in rows
+    ]
+    with _use_connection(conn) as conn:
+        cur = conn.cursor()
+        _batched_vector_insert(cur, table="table_rows", col_names=col_names,
+                               col_exprs=col_exprs, rows=scalar_rows,
+                               embeddings=embeddings, dim=dim)
+        conn.commit()
+        cur.close()
+    return len(rows)

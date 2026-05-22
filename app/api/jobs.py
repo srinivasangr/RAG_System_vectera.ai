@@ -65,14 +65,14 @@ class JobRegistry:
             return sorted(self._jobs.values(), key=lambda j: j.created_at, reverse=True)
 
     def run(self, job: Job, pdf_path: Path, options: dict[str, Any]) -> None:
-        """Spawn a worker thread that runs ingest_one_v2 and streams progress."""
+        """Spawn a worker thread that runs ingest_one and streams progress."""
         t = threading.Thread(target=self._worker, args=(job, pdf_path, options), daemon=True)
         t.start()
 
     def _worker(self, job: Job, pdf_path: Path, options: dict[str, Any]) -> None:
         # Import here so the API can boot even if heavy deps are slow to load.
-        from rag_system.ingest.pipeline_v3 import ingest_one_v3
-        from rag_system.ingest.vision_page import DEFAULT_VISION_MODEL
+        from rag_system.ingest.pipeline import ingest_one
+        from rag_system.ingest.vision import DEFAULT_VISION_MODEL
         from rag_system.llm_providers import get_llm
 
         job.status = "running"
@@ -87,7 +87,7 @@ class JobRegistry:
             if prov or model:
                 ingest_llm = get_llm(prov, model)
 
-            result = ingest_one_v3(
+            result = ingest_one(
                 pdf_path,
                 with_vision=options.get("with_vision", True),
                 with_propositions=options.get("with_propositions", True),

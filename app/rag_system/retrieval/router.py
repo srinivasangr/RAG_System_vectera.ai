@@ -21,7 +21,7 @@ from datetime import date, datetime
 
 from rag_system.llm_providers import get_llm
 from rag_system.llm_providers.base import Message
-from rag_system.storage import repository_v2 as repo
+from rag_system.storage import repository as repo
 
 log = logging.getLogger(__name__)
 

@@ -1,11 +1,11 @@
-"""Apply the additive v2 schema migration (schema_v2.sql).
+"""Apply the database schema (schema.sql).
 
-Idempotent: every statement uses IF NOT EXISTS, so re-running is a no-op.
-Assumes v1 schema (schema.sql) already exists.
+Idempotent: every statement uses IF NOT EXISTS, so re-running is a no-op and a
+fresh database is fully provisioned in one pass.
 
 Usage:
-    python -m rag_system.storage.migrate_v2
-    python -m rag_system.storage.migrate_v2 --verify   # just print the resulting columns/tables
+    python -m rag_system.storage.migrate
+    python -m rag_system.storage.migrate --verify   # just print the resulting columns/tables
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from pathlib import Path
 
 from rag_system.storage.db import get_connection
 
-SCHEMA_V2_FILE = Path(__file__).parent / "schema_v2.sql"
+SCHEMA_DIR = Path(__file__).parent
 
 
 def _split_statements(sql: str) -> list[str]:
@@ -94,11 +94,11 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--verify", action="store_true",
                    help="skip migration, just print resulting tables/columns")
-    p.add_argument("--file", type=str, default="schema_v2.sql",
-                   help="SQL file in this dir to apply (e.g. schema_v3.sql)")
+    p.add_argument("--file", type=str, default="schema.sql",
+                   help="SQL file in this dir to apply")
     args = p.parse_args(argv)
 
-    schema_file = SCHEMA_V2_FILE.parent / args.file
+    schema_file = SCHEMA_DIR / args.file
 
     with get_connection() as conn:
         cur = conn.cursor()

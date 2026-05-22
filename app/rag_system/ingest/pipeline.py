@@ -18,8 +18,8 @@ Docling = text/layout (fast, local). Vision = all visual content (tables,
 charts, maps, logos) with descriptions. Domain-agnostic throughout.
 
 Usage:
-  python -m rag_system.ingest.pipeline_v3 --doc <name>
-  python -m rag_system.ingest.pipeline_v3 --force --vision-model gemini-3.1-flash-lite
+  python -m rag_system.ingest.pipeline --doc <name>
+  python -m rag_system.ingest.pipeline --force --vision-model gemini-3.1-flash-lite
 """
 
 from __future__ import annotations
@@ -35,17 +35,17 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from rag_system.config import settings
-from rag_system.ingest.chunk_v2 import ChunkV2, chunk_page_v2
+from rag_system.ingest.chunk import Chunk, chunk_page
 from rag_system.ingest.metadata import file_checksum
-from rag_system.ingest.metadata_v2 import extract_file_meta, extract_metadata_v2
+from rag_system.ingest.metadata import extract_file_meta, extract_metadata
 from rag_system.ingest.parse import parse_pdf
 from rag_system.ingest.propositions import extract_propositions
-from rag_system.ingest.vision_page import (
+from rag_system.ingest.vision import (
     DEFAULT_VISION_MODEL, extract_page_elements, render_page_png,
 )
 from rag_system.llm_providers import get_embedder, get_llm, get_vision
-from rag_system.storage import repository_v2 as repo
-from rag_system.storage import repository_v3 as repo3
+from rag_system.storage import repository as repo
+from rag_system.storage import repository as repo3
 from rag_system.storage.db import get_connection
 
 log = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ def _page_is_visual(page) -> bool:
     return len(md.strip()) < 300
 
 
-def ingest_one_v3(
+def ingest_one(
     pdf_path: Path,
     *,
     with_vision: bool = True,
@@ -135,7 +135,7 @@ def ingest_one_v3(
     _emit("parse_done", pages=parsed.page_count)
 
     # 3. identify
-    meta = extract_metadata_v2(pdf_path, first_pages_text=first_pages, llm=llm)
+    meta = extract_metadata(pdf_path, first_pages_text=first_pages, llm=llm)
     doc_id = meta.doc_id
     stored_pdf_path = meta.source_path  # we overwrite with relative below
     _emit("identify_done", doc_id=doc_id, company=meta.company,
@@ -147,7 +147,7 @@ def ingest_one_v3(
     parents, children = [], []
     parents_by_page = {}
     for page in parsed.pages:
-        pc = chunk_page_v2(
+        pc = chunk_page(
             doc_id=doc_id, page_number=page.page_number, page_markdown=page.markdown,
             company=meta.company, doc_type=meta.doc_type, doc_date=meta.doc_date,
             as_of_date=meta.as_of_date, doc_family_id=meta.doc_family_id,
@@ -263,17 +263,17 @@ def ingest_one_v3(
     # 8. store
     rel_path = file_meta.get("original_filename") or pdf_path.name  # relative, no abs path
     with get_connection() as conn:
-        status = repo3.upsert_document_v3(meta, file_meta, parsed.page_count, rel_path, conn=conn)
-        repo.delete_doc_artifacts_v2(doc_id, conn=conn)
+        status = repo3.upsert_document(meta, file_meta, parsed.page_count, rel_path, conn=conn)
+        repo.delete_doc_artifacts(doc_id, conn=conn)
         repo3.insert_document_file(doc_id, file_meta["original_filename"],
                                    file_meta["mime_type"], file_meta["file_size_bytes"],
                                    pdf_b64, conn=conn)
         repo.insert_parent_chunks(parents, conn=conn)
         repo3.insert_page_images(page_images, conn=conn)
-        repo.insert_children_v2(children, child_vecs, conn=conn)
+        repo.insert_children(children, child_vecs, conn=conn)
         repo.insert_propositions(prop_dicts, prop_vecs, conn=conn)
-        repo3.insert_table_rows_v3(table_rows, row_vecs, conn=conn)
-        repo3.insert_chart_records_v3(chart_records, conn=conn)
+        repo3.insert_table_rows(table_rows, row_vecs, conn=conn)
+        repo3.insert_chart_records(chart_records, conn=conn)
         repo.mark_stage(doc_id, checksum, "upsert", "done", status, conn=conn)
         repo.mark_stage(doc_id, checksum, "complete", "done", "", conn=conn)
 
@@ -309,7 +309,7 @@ def _route_element(el, *, doc_id, page, parents_by_page, meta, vis_idx) -> dict:
     desc = el.description or ""
 
     def _chunk(text, ctype, kind_detail):
-        return ChunkV2(
+        return Chunk(
             chunk_id=f"{parent_id}::v{vis_idx:03d}",
             doc_id=doc_id, parent_id=parent_id, page_number=page.page_number,
             chunk_index=900 + vis_idx, text=text.strip(), chunk_type=ctype,
@@ -400,7 +400,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"v3 ingesting {len(pdfs)} PDF(s); vision_model={args.vision_model}")
     for pdf in pdfs:
         try:
-            r = ingest_one_v3(pdf, with_vision=not args.no_vision,
+            r = ingest_one(pdf, with_vision=not args.no_vision,
                               with_propositions=not args.no_propositions,
                               vision_model=args.vision_model, force=args.force,
                               dry_run=args.dry_run, llm=ingest_llm)

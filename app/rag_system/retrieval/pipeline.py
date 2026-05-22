@@ -25,7 +25,7 @@ from rag_system.config import settings
 from rag_system.llm_providers import get_embedder
 from rag_system.retrieval.filters import RetrievalFilters
 from rag_system.retrieval import reranker, router
-from rag_system.retrieval.retrieve_v2 import (
+from rag_system.retrieval.retrieve import (
     RetrievedChunk, hydrate, multi_source_retrieve,
 )
 from rag_system.storage.db import get_connection

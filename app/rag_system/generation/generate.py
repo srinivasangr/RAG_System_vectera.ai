@@ -93,7 +93,7 @@ Be concise and factual. Use the citation markers like [1], [2,3]."""
 
 
 @dataclass
-class AnswerV2:
+class Answer:
     question: str
     answer: str
     plan: object                       # router.RoutePlan
@@ -180,7 +180,7 @@ def answer_query(
     filters: RetrievalFilters | None = None,
     progress_cb=None,
     write_log: bool = True,
-) -> AnswerV2:
+) -> Answer:
     """End-to-end: retrieve → conflict-aware generate → parse citations."""
     t0 = time.perf_counter()
     llm = llm or get_llm(provider, model)
@@ -194,7 +194,7 @@ def answer_query(
 
     def _short(answer_text, plan, intent):
         """Build a short-circuit answer (no retrieval/generation)."""
-        return AnswerV2(
+        return Answer(
             question=query, answer=answer_text,
             plan=plan or router_mod.RoutePlan(intent=intent),
             sources=[], cited_numbers=[], conflicts=[],
@@ -226,7 +226,7 @@ def answer_query(
 
     # 2) No sources → honest refusal
     if not rr.sources:
-        return AnswerV2(
+        return Answer(
             question=query, answer=REFUSAL + " (Nothing relevant was retrieved.)",
             plan=rr.plan, sources=[], cited_numbers=[], conflicts=[],
             llm_provider=getattr(llm, "name", provider or settings.llm_provider),
@@ -256,7 +256,7 @@ def answer_query(
                "total_ms": int((time.perf_counter() - t0) * 1000)}
     log.info("answer(%r): %d sources, cited=%s, engine=%s, %dms",
              query[:50], len(rr.sources), cited, gen_provider, timings["total_ms"])
-    ans = AnswerV2(
+    ans = Answer(
         question=query, answer=text.strip(), plan=rr.plan, sources=rr.sources,
         cited_numbers=cited, conflicts=rr.conflicts,
         llm_provider=gen_provider, llm_model=gen_model or (model or settings.llm_model),
@@ -302,9 +302,9 @@ def answer_query(
     # Best-effort query log (never break the answer on a logging error).
     if write_log:
         try:
-            from rag_system.storage import repository_v3 as repo3
+            from rag_system.storage import repository as repo3
             stage_t = {k: v for k, v in timings.items() if k != "provider_chain"}
-            repo3.log_query_v2(
+            repo3.log_query(
                 question=query, answer=ans.answer, intent=getattr(rr.plan, "intent", None),
                 sub_queries=getattr(rr.plan, "sub_queries", []),
                 retrieved_ids=[s.parent_id for s in rr.sources],

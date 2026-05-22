@@ -12,9 +12,9 @@ Generation model and judge model are DIFFERENT (no self-grading). The judge
 grades against the battery's diagnostic criteria, not its own memory.
 
 Usage:
-  python -m eval.run_battery_v2                       # all 24
-  python -m eval.run_battery_v2 --only Q1,Q7,Q15      # subset
-  python -m eval.run_battery_v2 --gen-model gemini-3.1-flash-lite
+  python -m eval.run_battery                       # all 24
+  python -m eval.run_battery --only Q1,Q7,Q15      # subset
+  python -m eval.run_battery --gen-model gemini-3.1-flash-lite
 """
 
 from __future__ import annotations
@@ -38,11 +38,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from eval.judge import judge_answer
 from eval import ragas_metrics as rag
-from rag_system.generation.generate_v2 import answer_query
+from rag_system.generation.generate import answer_query
 from rag_system.llm_providers import get_llm
 
 BASELINE_DIR = Path(__file__).parent / "baselines"
-BATTERY_FILE = Path(__file__).parent / "battery_v1.yaml"
+BATTERY_FILE = Path(__file__).parent / "battery.yaml"
 
 # v1 baseline (from app/eval/baselines/v1_battery_scored.md) for the delta.
 V1_BASELINE = {"Pass": 6, "Partial": 7, "Fail": 11}
