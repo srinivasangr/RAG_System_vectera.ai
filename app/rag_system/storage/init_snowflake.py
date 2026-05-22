@@ -15,15 +15,22 @@ SCHEMA_FILE = Path(__file__).parent / "schema.sql"
 
 
 def _split_statements(sql: str) -> list[str]:
-    """Split on semicolons that terminate statements. Naive but works for our DDL."""
+    """Split on semicolon-terminated statements. Skips comment/blank lines.
+
+    Robust to inline `-- comments` that follow a terminating `;` on the same
+    line: we strip the trailing comment before testing for the `;` so a line
+    like `ALTER TABLE ... FLOAT;  -- note` is recognised as one statement.
+    """
     out, buf = [], []
     for line in sql.splitlines():
         stripped = line.strip()
         if stripped.startswith("--") or not stripped:
             continue
         buf.append(line)
-        if stripped.endswith(";"):
-            stmt = "\n".join(buf).rstrip(";").strip()
+        # Ignore a trailing inline comment when deciding if the statement ends.
+        code = stripped.split("--", 1)[0].rstrip()
+        if code.endswith(";"):
+            stmt = "\n".join(buf).strip().rstrip(";").strip()
             if stmt:
                 out.append(stmt)
             buf = []

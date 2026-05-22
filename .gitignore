@@ -87,6 +87,9 @@ Documents/
 # Anything starting with an underscore in scripts/ is an ad-hoc helper
 app/scripts/_*.py
 
+# Local-only setup cheat-sheet (contains machine-specific paths)
+setup.txt
+
 # ===========================================================================
 # Local-only docs (kept on disk, not in the repo): design drafts, the
 # concepts primer, v1 diagram tooling. The canonical docs are
