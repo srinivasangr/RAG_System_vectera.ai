@@ -9,7 +9,7 @@ Produces THREE artifacts per page, instead of v1's flat child-chunk list:
                       - slide_title (header context)
                       - propagated doc metadata (doc_type, as_of_date, family)
   3. TableRowRec[]— one record per table row with COLUMN LABELS preserved,
-                    so "PSA 92.0% / NSA 84.3%" never loses which is which (F8).
+                    so "PSA 92.0% / NSA 84.3%" never loses which is which.
 
 Design choices that are domain-agnostic:
   - Slide preservation: most deck slides fit in one chunk, so we keep a page's
@@ -299,7 +299,7 @@ def chunk_page(
             else:
                 for piece in _splitter().split_text(segment):
                     _push_child(piece, "table")
-            # 2) decompose into structured rows with column labels (F8)
+            # 2) decompose into structured rows with column labels
             header, body = _parse_md_table(segment)
             if header and body:
                 table_id = f"{parent_id}::t{table_seq:02d}"

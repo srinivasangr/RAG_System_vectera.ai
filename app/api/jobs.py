@@ -6,7 +6,7 @@ drains in real time. We also keep the full event list so a client that
 connects late still sees everything.
 
 Single-process, single-user local tool — no external queue needed. (The
-production path swaps this for Celery/Redis; see architecture_v2_final.md §10.)
+production path swaps this for Celery/Redis; see docs/architecture.md.)
 """
 
 from __future__ import annotations

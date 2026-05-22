@@ -9,7 +9,7 @@ that overfits to the example corpus. v2 identifies a document by *reading it*:
                       not just the filename — closes failure mode F3)
   - doc_date        : nominal publication date
   - doc_family_id   : groups versions/snapshots of the same recurring series so
-                      version-pair retrieval can surface them together (F2)
+                      version-pair retrieval can surface them together
 
 Nothing here knows what a "REIT" or an "FFO" is. Swap in medical, legal, or
 financial PDFs and the same code identifies them — because all domain knowledge
@@ -327,7 +327,7 @@ def extract_metadata(
     # --- doc_family_id: groups recurring versions of the same series ---
     # Generic key = normalized entity + generic doc_type. Two snapshots of the
     # same series from the same entity (e.g. two quarterly decks) share a family,
-    # enabling version-pair surfacing (F2) without any domain knowledge.
+    # enabling version-pair surfacing without any domain knowledge.
     family_seed = f"{_norm_entity(company) or _slugify(name)}|{doc_type}"
     doc_family_id = hashlib.sha1(family_seed.encode("utf-8")).hexdigest()[:16]
 

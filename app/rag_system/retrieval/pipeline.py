@@ -10,8 +10,8 @@ Pipeline:
         ─▶ conflict detection (same entity, multiple as-of dates)
   ─▶ ranked Sources + conflict tags + stage timings (observability)
 
-Each stage is justified by a battery failure mode (F1–F8); see
-docs/architecture_v2_final.md.
+Each stage targets a specific failure mode of naive single-shot retrieval; see
+docs/architecture.md.
 """
 
 from __future__ import annotations
@@ -77,7 +77,7 @@ def _diversify(chunks: list[RetrievedChunk], *, top_k: int, per_doc: int = 3) ->
 
 
 # ---------------------------------------------------------------------------
-# Version-pair expansion (F2)
+# Version-pair expansion
 # ---------------------------------------------------------------------------
 def _family_map() -> dict[str, list[str]]:
     """doc_family_id -> [doc_id, ...] for families with >1 document."""
@@ -95,7 +95,7 @@ def _expand_version_pairs(query: str, chunks: list[RetrievedChunk], *,
                           plan: router.RoutePlan) -> list[RetrievedChunk]:
     """If a result's document has sibling versions not represented, pull the
     best-matching chunk from each missing sibling so the LLM can compare/contrast
-    versions (closes F2). Skipped when the user scoped a specific date."""
+    versions. Skipped when the user scoped a specific date."""
     if plan.as_of_date_filter:
         return chunks
     fam = _family_map()
