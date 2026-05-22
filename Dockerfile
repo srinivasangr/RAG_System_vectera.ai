@@ -1,9 +1,9 @@
-# Single-stage Dockerfile — convenience for reviewers who prefer a container.
-# Not required to run the app (the venv path in README is faster); kept as an
-# alternative so `docker compose up` is one command.
+# Container image for the FastAPI app (REST API + streaming UI).
 #
 # Build:  docker build -t rag-system .
-# Run:    docker run --rm -p 8501:8501 --env-file app/.env rag-system
+# Run:    docker run --rm -p 8000:8000 --env-file app/.env rag-system
+#
+# On Render/Railway the platform injects $PORT; the start command binds to it.
 
 FROM python:3.11-slim
 
@@ -14,24 +14,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /workspace
+WORKDIR /workspace/app
 
 # Install Python deps first so the wheel cache layer is reused on code changes
-COPY requirements.txt /workspace/requirements.txt
+COPY app/requirements.txt /workspace/app/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the repo
-COPY . /workspace
+# Copy the application code
+COPY app/ /workspace/app/
 
-# Streamlit defaults
 ENV PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=utf-8 \
-    STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
-    STREAMLIT_SERVER_PORT=8501 \
-    STREAMLIT_SERVER_HEADLESS=true
+    PORT=8000
 
-EXPOSE 8501
+EXPOSE 8000
 
-# Run the app from the repo root; the streamlit script handles sys.path itself.
-CMD ["streamlit", "run", "app/rag_system/ui/streamlit_app.py"]
+# Bind to the platform-provided $PORT (defaults to 8000 locally).
+CMD ["sh", "-c", "uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
